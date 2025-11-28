@@ -1,0 +1,6 @@
+# ArgoCD Helm values
+# Minimal config for lab use - tune as needed
+
+server:
+  service:
+    type: NodePort  # Easy access in minikube, change to LoadBalancer for cloud
