@@ -2,3 +2,8 @@
 *.swp
 *.swo
 *~
+
+# Vault secrets - NEVER commit these
+vault-keys.json
+*.pem
+*.key
