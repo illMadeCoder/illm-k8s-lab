@@ -2,29 +2,31 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: backstage
+  name: vault
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
-    - repoURL: https://backstage.github.io/charts
-      chart: backstage
-      targetRevision: 2.6.3
+    - repoURL: https://helm.releases.hashicorp.com
+      chart: vault
+      targetRevision: 0.31.0
       helm:
-        releaseName: backstage
+        releaseName: vault
         valueFiles:
-          - $values/bootstrap/backstage/values.yaml
+          - $values/manifests/workloads/vault/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: backstage
+    namespace: vault
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=true

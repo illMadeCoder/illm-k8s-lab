@@ -1,8 +1,9 @@
 ---
+# App of Apps pattern - this Application manages other Applications
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: demo-app
+  name: app-of-apps
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -11,13 +12,13 @@ spec:
   source:
     repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
     targetRevision: HEAD
-    path: apps/demo-app
+    path: manifests/applications
+    directory:
+      exclude: 'app-of-apps.yaml'
   destination:
     server: https://kubernetes.default.svc
-    namespace: demo
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
