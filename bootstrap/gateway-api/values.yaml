@@ -1,6 +1,9 @@
 # Envoy Gateway Helm Values
 # https://gateway.envoyproxy.io/docs/install/install-helm/
 
+# Skip CRD installation to avoid annotation overflow issue
+skipCRDs: false
+
 # Gateway configuration
 config:
   envoyGateway:
