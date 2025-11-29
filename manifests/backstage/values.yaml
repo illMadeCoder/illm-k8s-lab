@@ -18,18 +18,6 @@ backstage:
     repository: backstage/backstage
     tag: latest
 
-  # Mount the catalog ConfigMap
-  extraVolumes:
-    - name: catalog
-      configMap:
-        name: backstage-catalog
-        defaultMode: 0644
-
-  extraVolumeMounts:
-    - name: catalog
-      mountPath: /etc/backstage/catalog
-      readOnly: true
-
   extraEnvVars:
     - name: APP_CONFIG_app_baseUrl
       value: "http://localhost:7007"
@@ -72,13 +60,14 @@ backstage:
       rules:
         - allow: [Component, System, API, Resource, Location, Template]
       locations:
-        - type: file
-          target: /etc/backstage/catalog/catalog.yaml
+        - type: url
+          target: https://raw.githubusercontent.com/illMadeCoder/illm-k8s-lab/main/backstage-catalog.yaml
           rules:
             - allow: [System, Component, API, Resource, Location, Template]
 
     # Authentication configuration for lab
     auth:
+      environment: development
       providers:
         guest:
           dangerouslyAllowOutsideDomainRedirects: true
