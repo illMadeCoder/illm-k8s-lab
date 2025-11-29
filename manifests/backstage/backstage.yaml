@@ -44,6 +44,9 @@ spec:
                 baseUrl: http://localhost:7007
                 listen:
                   port: 7007
+                reading:
+                  allow:
+                    - host: raw.githubusercontent.com
                 csp:
                   connect-src: ["'self'", "http:", "https:"]
                 cors:
