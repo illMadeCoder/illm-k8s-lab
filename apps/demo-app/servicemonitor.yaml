@@ -1,0 +1,18 @@
+---
+# ServiceMonitor for Prometheus to scrape demo-app metrics
+# This tells Prometheus Operator to scrape metrics from the demo-app
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: demo-app
+  namespace: demo
+  labels:
+    app: demo-app
+spec:
+  selector:
+    matchLabels:
+      app: demo-app
+  endpoints:
+    - port: http-backend
+      interval: 30s
+      path: /metrics
