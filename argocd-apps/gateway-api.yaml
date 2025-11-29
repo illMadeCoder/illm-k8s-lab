@@ -8,6 +8,12 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: envoy-gateway
+      jsonPointers:
+        - /spec/selector
   sources:
     - repoURL: oci://docker.io/envoyproxy/gateway-helm
       chart: gateway-helm
