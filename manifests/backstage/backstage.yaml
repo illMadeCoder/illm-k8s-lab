@@ -38,17 +38,17 @@ spec:
                 mountPath: /etc/backstage
             extraEnvVars:
               - name: APP_CONFIG_app_baseUrl
-                value: "http://localhost:7007"
+                value: "http://192.168.49.2:30273"
               - name: APP_CONFIG_backend_baseUrl
-                value: "http://localhost:7007"
+                value: "http://192.168.49.2:30273"
             appConfig:
               app:
                 title: "K8s Lab Backstage"
-                baseUrl: http://localhost:7007
+                baseUrl: http://192.168.49.2:30273
               organization:
                 name: "K8s Lab"
               backend:
-                baseUrl: http://localhost:7007
+                baseUrl: http://192.168.49.2:30273
                 listen:
                   port: 7007
                 reading:
@@ -57,7 +57,9 @@ spec:
                 csp:
                   connect-src: ["'self'", "http:", "https:"]
                 cors:
-                  origin: http://localhost:7007
+                  origin:
+                    - http://192.168.49.2:30273
+                    - http://localhost:7007
                   methods: [GET, HEAD, PATCH, POST, PUT, DELETE]
                   credentials: true
                 database:
