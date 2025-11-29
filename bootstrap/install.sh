@@ -7,15 +7,19 @@ usage() {
   echo "Usage: $0 [component...]"
   echo ""
   echo "Components:"
-  echo "  argocd    Install ArgoCD"
-  echo "  vault     Install HashiCorp Vault"
-  echo "  all       Install everything (default)"
+  echo "  argocd      Install ArgoCD"
+  echo "  vault       Install HashiCorp Vault"
+  echo "  gateway-api Install Gateway API with Envoy Gateway"
+  echo "  backstage   Install Backstage developer portal"
+  echo "  all         Install everything (default)"
   echo ""
   echo "Examples:"
-  echo "  $0              # Install all"
-  echo "  $0 argocd       # Install only ArgoCD"
-  echo "  $0 vault        # Install only Vault"
-  echo "  $0 argocd vault # Install both"
+  echo "  $0                  # Install all"
+  echo "  $0 argocd           # Install only ArgoCD"
+  echo "  $0 vault            # Install only Vault"
+  echo "  $0 gateway-api      # Install only Gateway API"
+  echo "  $0 backstage        # Install only Backstage"
+  echo "  $0 argocd vault     # Install both"
 }
 
 install_argocd() {
@@ -49,10 +53,24 @@ install_vault() {
   "$SCRIPT_DIR/vault/install.sh"
 }
 
+install_gateway_api() {
+  echo "========================================"
+  echo "Installing Gateway API with Envoy Gateway..."
+  echo "========================================"
+  "$SCRIPT_DIR/gateway-api/install.sh"
+}
+
+install_backstage() {
+  echo "========================================"
+  echo "Installing Backstage..."
+  echo "========================================"
+  "$SCRIPT_DIR/backstage/install.sh"
+}
+
 # Parse arguments
 COMPONENTS=("$@")
 if [ ${#COMPONENTS[@]} -eq 0 ] || [[ " ${COMPONENTS[*]} " =~ " all " ]]; then
-  COMPONENTS=("argocd" "vault")
+  COMPONENTS=("argocd" "vault" "gateway-api" "backstage")
 fi
 
 # Install requested components
@@ -63,6 +81,12 @@ for component in "${COMPONENTS[@]}"; do
       ;;
     vault)
       install_vault
+      ;;
+    gateway-api)
+      install_gateway_api
+      ;;
+    backstage)
+      install_backstage
       ;;
     all)
       # Handled above

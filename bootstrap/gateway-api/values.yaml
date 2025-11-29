@@ -1,0 +1,12 @@
+# Envoy Gateway Helm Values
+# https://gateway.envoyproxy.io/docs/install/install-helm/
+
+# Gateway configuration
+config:
+  envoyGateway:
+    # Enable Gateway API resources
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+
+# Create a default GatewayClass for convenience
+createGatewayClass: true
