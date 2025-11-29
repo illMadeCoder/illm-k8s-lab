@@ -15,10 +15,9 @@ spec:
         - .metadata.annotations
         - .metadata.managedFields
         - .spec.validation
-    # Ignore managedFields and annotations for all other resources
+    # Ignore managedFields for all resources (common with serverSideApply)
     - jqPathExpressions:
         - .metadata.managedFields
-        - .metadata.annotations
   sources:
     - repoURL: https://prometheus-community.github.io/helm-charts
       chart: kube-prometheus-stack
@@ -45,7 +44,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
-      - ServerSideApply=true
     retry:
       limit: 5
       backoff:
