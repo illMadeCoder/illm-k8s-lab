@@ -1,6 +1,10 @@
 # Kafka Helm values for lab environment
 # Bitnami Kafka chart configuration
 
+# Image override - use latest to avoid tag issues
+image:
+  tag: "3.8"
+
 # Cluster configuration
 replicaCount: 3
 
