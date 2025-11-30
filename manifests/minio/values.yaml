@@ -1,0 +1,33 @@
+# MinIO Helm values for lab environment
+# S3-compatible object storage
+
+mode: standalone
+
+# Root credentials - change in production!
+rootUser: admin
+rootPassword: minio123
+
+# Resource allocation for lab
+resources:
+  requests:
+    memory: 512Mi
+
+# Persistent storage
+persistence:
+  enabled: true
+  size: 10Gi
+
+# Console (web UI) settings
+consoleService:
+  type: ClusterIP
+  port: 9001
+
+# API service settings
+service:
+  type: ClusterIP
+  port: 9000
+
+# Disable metrics for lighter footprint
+metrics:
+  serviceMonitor:
+    enabled: false

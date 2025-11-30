@@ -1,0 +1,96 @@
+# Loki Helm values for lab environment
+# Deploys Loki in single binary mode for simplicity
+
+# Deployment mode - single binary is simplest for lab
+deploymentMode: SingleBinary
+
+# Single binary configuration
+singleBinary:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Loki configuration
+loki:
+  # Authentication disabled for lab
+  auth_enabled: false
+
+  # Common config
+  commonConfig:
+    replication_factor: 1
+
+  # Schema configuration
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+  # Storage configuration - filesystem for lab
+  storage:
+    type: filesystem
+
+  # Limits configuration
+  limits_config:
+    retention_period: 168h  # 7 days
+    ingestion_rate_mb: 4
+    ingestion_burst_size_mb: 6
+    max_query_series: 5000
+
+# Disable components not needed in single binary mode
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+# Gateway configuration
+gateway:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+# Disable test pod
+test:
+  enabled: false
+
+# Disable monitoring (we have Prometheus already)
+monitoring:
+  dashboards:
+    enabled: false
+  rules:
+    enabled: false
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
+
+# Chunksache configuration
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false
+
+# Minio disabled - using filesystem
+minio:
+  enabled: false
+
+# Promtail for log collection
+# Note: Consider deploying promtail separately for more control
