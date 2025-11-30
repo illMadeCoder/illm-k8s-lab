@@ -1,0 +1,23 @@
+# Strimzi Kafka Operator Helm values for lab environment
+
+# Watch all namespaces for Kafka resources
+watchNamespaces: []
+watchAnyNamespace: true
+
+# Resource allocation for operator
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+
+# Log level
+logLevel: INFO
+
+# Feature gates
+featureGates: ""
+
+# Generate network policies
+generateNetworkPolicy: false

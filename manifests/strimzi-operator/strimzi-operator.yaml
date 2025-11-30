@@ -2,26 +2,26 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: kafka
+  name: strimzi-operator
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
-    - repoURL: https://charts.bitnami.com/bitnami
-      chart: kafka
-      targetRevision: 28.0.0
+    - repoURL: https://strimzi.io/charts/
+      chart: strimzi-kafka-operator
+      targetRevision: 0.44.0
       helm:
-        releaseName: kafka
+        releaseName: strimzi-operator
         valueFiles:
-          - $values/manifests/kafka/values.yaml
+          - $values/manifests/strimzi-operator/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: kafka
+    namespace: strimzi-operator
   syncPolicy:
     automated:
       prune: true
