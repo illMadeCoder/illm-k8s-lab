@@ -3,7 +3,7 @@
 
 # Image override - use latest to avoid tag issues
 image:
-  tag: "3.8"
+  tag: "latest"
 
 # Cluster configuration
 replicaCount: 3
