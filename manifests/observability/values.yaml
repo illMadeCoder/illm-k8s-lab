@@ -48,10 +48,9 @@ prometheusOperator:
     limits:
       cpu: 200m
       memory: 256Mi
-  # Disable admission webhook jobs - webhooks already configured
+  # Disable admission webhooks entirely for lab environment
   admissionWebhooks:
-    patch:
-      enabled: false
+    enabled: false
 
 # Node exporter - collects host-level metrics
 nodeExporter:
