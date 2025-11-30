@@ -1,0 +1,86 @@
+# OpenTelemetry Collector Helm values for lab environment
+# Collector receives telemetry data (traces, metrics, logs) and exports to backends
+
+# Deployment mode (deployment for simplicity in lab)
+mode: deployment
+
+# Use the k8s distribution which includes k8s-specific receivers/processors
+image:
+  repository: otel/opentelemetry-collector-k8s
+
+# Resource limits for lab environment
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 512Mi
+
+# Ports configuration
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+  prometheus:
+    enabled: true
+    containerPort: 9090
+    servicePort: 9090
+    protocol: TCP
+
+# Collector configuration
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+  processors:
+    batch:
+      timeout: 10s
+      send_batch_size: 1024
+    memory_limiter:
+      check_interval: 1s
+      limit_mib: 400
+      spike_limit_mib: 100
+
+  exporters:
+    debug:
+      verbosity: basic
+    prometheus:
+      endpoint: 0.0.0.0:9090
+      namespace: otel
+      resource_to_telemetry_conversion:
+        enabled: true
+
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [debug]
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [prometheus, debug]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [debug]
+
+# Service monitor for Prometheus scraping
+serviceMonitor:
+  enabled: true
+  metricsEndpoints:
+    - port: prometheus
+      interval: 15s
