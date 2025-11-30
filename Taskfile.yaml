@@ -4,7 +4,7 @@ silent: true
 
 vars:
   ARGOCD_NAMESPACE: argocd
-  ARGOCD_VALUES: bootstrap/argocd/values.yaml
+  ARGOCD_VALUES: manifests/argocd/values.yaml
 
 tasks:
   default:

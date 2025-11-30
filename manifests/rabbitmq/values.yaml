@@ -1,0 +1,44 @@
+# RabbitMQ Helm values for lab environment
+
+# Authentication - change in production!
+auth:
+  username: admin
+  password: rabbitmq123
+  erlangCookie: secretcookie
+
+# Resource allocation for lab
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+
+# Persistent storage
+persistence:
+  enabled: true
+  size: 5Gi
+
+# Service configuration
+service:
+  type: ClusterIP
+
+# Management plugin (web UI)
+plugins: "rabbitmq_management rabbitmq_prometheus"
+
+# Metrics for Prometheus
+metrics:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: rabbitmq
+
+# Replica count for lab (single node)
+replicaCount: 1
+
+# Community Docker image (lighter than Bitnami)
+image:
+  registry: docker.io
+  repository: bitnami/rabbitmq
+  tag: 4.0.4-debian-12-r0
