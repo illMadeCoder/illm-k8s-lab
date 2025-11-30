@@ -4,9 +4,9 @@
 # Deployment mode (deployment for simplicity in lab)
 mode: deployment
 
-# Use the k8s distribution which includes k8s-specific receivers/processors
+# Use the contrib distribution which includes prometheus exporter and k8s receivers
 image:
-  repository: otel/opentelemetry-collector-k8s
+  repository: otel/opentelemetry-collector-contrib
 
 # Resource limits for lab environment
 resources:
