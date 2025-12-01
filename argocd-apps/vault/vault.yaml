@@ -23,7 +23,7 @@ spec:
       helm:
         releaseName: vault
         valueFiles:
-          - $values/manifests/vault/values.yaml
+          - $values/argocd-apps/vault/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values

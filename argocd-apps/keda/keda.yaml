@@ -15,7 +15,7 @@ spec:
       helm:
         releaseName: keda
         valueFiles:
-          - $values/manifests/keda/values.yaml
+          - $values/argocd-apps/keda/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values

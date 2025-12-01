@@ -15,7 +15,7 @@ spec:
       helm:
         releaseName: chaos-mesh
         valueFiles:
-          - $values/manifests/chaos-mesh/values.yaml
+          - $values/argocd-apps/chaos-mesh/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values

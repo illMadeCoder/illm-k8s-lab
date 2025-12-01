@@ -15,7 +15,7 @@ spec:
       helm:
         releaseName: otel-collector
         valueFiles:
-          - $values/manifests/otel-collector/values.yaml
+          - $values/argocd-apps/otel-collector/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values

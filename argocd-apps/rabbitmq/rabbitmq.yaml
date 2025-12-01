@@ -11,11 +11,11 @@ spec:
   sources:
     - repoURL: https://charts.bitnami.com/bitnami
       chart: rabbitmq
-      targetRevision: 15.1.1
+      targetRevision: 16.0.14
       helm:
         releaseName: rabbitmq
         valueFiles:
-          - $values/manifests/rabbitmq/values.yaml
+          - $values/argocd-apps/rabbitmq/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values

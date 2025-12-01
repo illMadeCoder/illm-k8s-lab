@@ -15,7 +15,7 @@ spec:
       helm:
         releaseName: minio
         valueFiles:
-          - $values/manifests/minio/values.yaml
+          - $values/argocd-apps/minio/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values

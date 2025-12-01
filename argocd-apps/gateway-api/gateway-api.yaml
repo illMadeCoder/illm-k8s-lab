@@ -31,7 +31,7 @@ spec:
       helm:
         releaseName: eg
         valueFiles:
-          - $values/manifests/gateway-api/values.yaml
+          - $values/argocd-apps/gateway-api/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values

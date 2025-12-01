@@ -15,7 +15,7 @@ spec:
       helm:
         releaseName: strimzi-operator
         valueFiles:
-          - $values/manifests/strimzi-operator/values.yaml
+          - $values/argocd-apps/strimzi-operator/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       ref: values
