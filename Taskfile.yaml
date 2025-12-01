@@ -218,6 +218,62 @@ tasks:
             }
           }"
 
+  exp:run:prod:
+    desc: Run k6 load test on prod loadgen cluster (NAME=<experiment>)
+    cmds:
+      - |
+        if [ -z "{{.NAME}}" ]; then
+          echo "Usage: task exp:run:prod NAME=<experiment-name> [USERS=10] [DURATION=60s]"
+          exit 1
+        fi
+        TF_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/terraform/prod"
+        KUBECONFIG_FILE="$TF_DIR/kubeconfig-loadgen"
+
+        if [ ! -f "$KUBECONFIG_FILE" ]; then
+          echo "ERROR: Kubeconfig not found: $KUBECONFIG_FILE"
+          echo "Run 'task exp:deploy:prod NAME={{.NAME}}' first"
+          exit 1
+        fi
+
+        # Target URL - must be externally accessible from loadgen cluster
+        # Override with TARGET= if using custom endpoint
+        TARGET_URL={{.TARGET | default ""}}
+        if [ -z "$TARGET_URL" ]; then
+          echo "ERROR: TARGET URL required for cross-cluster load testing"
+          echo "Usage: task exp:run:prod NAME={{.NAME}} TARGET=http://<target-external-ip>"
+          echo ""
+          echo "Get target cluster's external IP:"
+          echo "  KUBECONFIG=$TF_DIR/kubeconfig-target kubectl get svc -n demo"
+          exit 1
+        fi
+
+        USERS={{.USERS | default "10"}}
+        DURATION={{.DURATION | default "60s"}}
+        SCRIPT={{.SCRIPT | default "baseline"}}
+
+        echo "Running k6 load test on prod:"
+        echo "  Cluster: loadgen"
+        echo "  Target: $TARGET_URL"
+        echo "  Users: $USERS"
+        echo "  Duration: $DURATION"
+        echo ""
+
+        KUBECONFIG="$KUBECONFIG_FILE" kubectl run k6-${SCRIPT}-$(date +%s) \
+          --namespace=k6 \
+          --image=grafana/k6:latest \
+          --rm -i --restart=Never \
+          --overrides="{
+            \"spec\": {
+              \"containers\": [{
+                \"name\": \"k6\",
+                \"image\": \"grafana/k6:latest\",
+                \"args\": [\"run\", \"-e\", \"USERS=$USERS\", \"-e\", \"DURATION=$DURATION\", \"-e\", \"TARGET_URL=$TARGET_URL\", \"/scripts/${SCRIPT}.js\"],
+                \"volumeMounts\": [{\"name\": \"scripts\", \"mountPath\": \"/scripts\"}]
+              }],
+              \"volumes\": [{\"name\": \"scripts\", \"configMap\": {\"name\": \"k6-scripts\"}}]
+            }
+          }"
+
   exp:status:
     desc: Show running k6 pods
     cmds:
