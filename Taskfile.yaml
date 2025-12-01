@@ -167,7 +167,7 @@ tasks:
     cmds:
       - |
         echo "Deploying core infrastructure..."
-        kubectl apply -f core-app-of-apps.yaml
+        kubectl apply -f argocd-apps/core-utils.yaml
         echo "Waiting for ArgoCD to sync..."
         sleep 5
         kubectl get applications -n argocd -l layer=core
