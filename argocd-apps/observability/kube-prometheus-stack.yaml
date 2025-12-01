@@ -38,7 +38,7 @@ spec:
       ref: values
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/observability
+      path: argocd-apps/observability
       directory:
         include: '*-httproute.yaml'
   destination:

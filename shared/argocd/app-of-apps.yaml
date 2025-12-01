@@ -15,7 +15,7 @@ spec:
     # TLS/Certificate management
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/cert-manager
+      path: argocd-apps/cert-manager
       directory:
         recurse: false
         include: '*.yaml'
@@ -23,7 +23,7 @@ spec:
     # Gateway/Ingress
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/gateway-api
+      path: argocd-apps/gateway-api
       directory:
         recurse: false
         include: '*.yaml'
@@ -31,7 +31,7 @@ spec:
     # Observability - Prometheus/Grafana
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/observability
+      path: argocd-apps/observability
       directory:
         recurse: false
         include: '*.yaml'
@@ -39,7 +39,7 @@ spec:
     # Observability - Loki (logs)
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/loki
+      path: argocd-apps/loki
       directory:
         recurse: false
         include: '*.yaml'
@@ -47,7 +47,7 @@ spec:
     # Observability - Promtail (log shipper)
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/promtail
+      path: argocd-apps/promtail
       directory:
         recurse: false
         include: '*.yaml'
@@ -55,7 +55,7 @@ spec:
     # Observability - OpenTelemetry
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/otel-collector
+      path: argocd-apps/otel-collector
       directory:
         recurse: false
         include: '*.yaml'
@@ -63,7 +63,7 @@ spec:
     # Artifact storage
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/minio
+      path: argocd-apps/minio
       directory:
         recurse: false
         include: '*.yaml'
@@ -71,7 +71,7 @@ spec:
     # Workflow engine
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/argo-workflows
+      path: argocd-apps/argo-workflows
       directory:
         recurse: false
         include: '*.yaml'

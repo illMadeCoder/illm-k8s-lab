@@ -16,7 +16,7 @@ spec:
     # Target application for load testing
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/demo-app
+      path: argocd-apps/demo-app
       directory:
         recurse: false
         include: '*.yaml'
@@ -24,7 +24,7 @@ spec:
     # Load testing framework
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/locust
+      path: argocd-apps/locust
       directory:
         recurse: false
         include: '*.yaml'

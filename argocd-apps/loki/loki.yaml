@@ -21,7 +21,7 @@ spec:
       ref: values
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: manifests/loki
+      path: argocd-apps/loki
       directory:
         include: '*-httproute.yaml'
   destination:

@@ -53,11 +53,11 @@ spec:
   # Kubernetes deployment (legacy - use argocd section instead)
   deploy:
     manifestRefs:
-      - path: manifests/demo-app
-      - path: manifests/observability
-      - path: manifests/locust
-      - path: manifests/minio
-      - path: manifests/argo-workflows
+      - path: argocd-apps/demo-app
+      - path: argocd-apps/observability
+      - path: argocd-apps/locust
+      - path: argocd-apps/minio
+      - path: argocd-apps/argo-workflows
 
   # Experiment execution
   execute:

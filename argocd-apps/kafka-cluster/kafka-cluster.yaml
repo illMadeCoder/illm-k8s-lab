@@ -2,7 +2,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: cert-manager-issuers
+  name: kafka-cluster
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -11,12 +11,10 @@ spec:
   source:
     repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
     targetRevision: HEAD
-    path: manifests/cert-manager
-    directory:
-      include: 'issuers.yaml'
+    path: argocd-apps/kafka-cluster/resources
   destination:
     server: https://kubernetes.default.svc
-    namespace: cert-manager
+    namespace: kafka
   syncPolicy:
     automated:
       prune: true
