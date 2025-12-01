@@ -76,6 +76,14 @@ spec:
         recurse: false
         include: '*.yaml'
 
+    # Load testing (k6)
+    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
+      targetRevision: HEAD
+      path: argocd-apps/k6
+      directory:
+        recurse: false
+        include: '*.yaml'
+
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
