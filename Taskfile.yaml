@@ -227,3 +227,71 @@ tasks:
         echo "Cleaning up k6 pods..."
         kubectl delete pods -n k6 --all --ignore-not-found
         echo "Done."
+
+  # =============================================================================
+  # Production Deployment (Azure AKS)
+  # =============================================================================
+  exp:deploy:prod:
+    desc: Deploy experiment to production AKS (NAME=<experiment>)
+    cmds:
+      - |
+        if [ -z "{{.NAME}}" ]; then
+          echo "Usage: task exp:deploy:prod NAME=<experiment-name>"
+          exit 1
+        fi
+        PROD_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/prod"
+        if [ ! -d "$PROD_DIR" ]; then
+          echo "ERROR: prod directory not found at $PROD_DIR"
+          exit 1
+        fi
+        echo "Deploying production infrastructure for: {{.NAME}}"
+        cd "$PROD_DIR" && terraform init && terraform apply -auto-approve
+        echo ""
+        echo "Getting kubeconfig..."
+        cd "$PROD_DIR" && terraform output -raw kube_config_command
+
+  exp:plan:prod:
+    desc: Plan production deployment (NAME=<experiment>)
+    cmds:
+      - |
+        if [ -z "{{.NAME}}" ]; then
+          echo "Usage: task exp:plan:prod NAME=<experiment-name>"
+          exit 1
+        fi
+        PROD_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/prod"
+        if [ ! -d "$PROD_DIR" ]; then
+          echo "ERROR: prod directory not found at $PROD_DIR"
+          exit 1
+        fi
+        echo "Planning production infrastructure for: {{.NAME}}"
+        cd "$PROD_DIR" && terraform init && terraform plan
+
+  exp:undeploy:prod:
+    desc: Destroy production AKS cluster (NAME=<experiment>)
+    prompt: This will DESTROY the production AKS cluster. Continue?
+    cmds:
+      - |
+        if [ -z "{{.NAME}}" ]; then
+          echo "Usage: task exp:undeploy:prod NAME=<experiment-name>"
+          exit 1
+        fi
+        PROD_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/prod"
+        if [ ! -d "$PROD_DIR" ]; then
+          echo "ERROR: prod directory not found at $PROD_DIR"
+          exit 1
+        fi
+        echo "Destroying production infrastructure for: {{.NAME}}"
+        cd "$PROD_DIR" && terraform destroy -auto-approve
+
+  exp:kubeconfig:prod:
+    desc: Get kubeconfig for production cluster (NAME=<experiment>)
+    cmds:
+      - |
+        if [ -z "{{.NAME}}" ]; then
+          echo "Usage: task exp:kubeconfig:prod NAME=<experiment-name>"
+          exit 1
+        fi
+        PROD_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/prod"
+        cd "$PROD_DIR" && eval "$(terraform output -raw kube_config_command)"
+        echo "Kubeconfig updated. Current context:"
+        kubectl config current-context
