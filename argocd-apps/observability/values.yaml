@@ -25,7 +25,17 @@ prometheus:
 
 # Grafana configuration
 grafana:
-  enabled: false
+  enabled: true
+  adminPassword: admin
+  persistence:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
 
 # AlertManager configuration (optional for lab)
 alertmanager:
