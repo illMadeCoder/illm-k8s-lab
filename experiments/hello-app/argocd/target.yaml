@@ -16,7 +16,7 @@ spec:
     # Deploy hello-app manifests
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: custom-apps/hello-app/manifests
+      path: images/hello-app/manifests
     # Deploy k6 test scripts ConfigMap
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD

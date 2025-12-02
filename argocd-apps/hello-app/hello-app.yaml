@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
     targetRevision: HEAD
-    path: custom-apps/hello-app/manifests
+    path: images/hello-app/manifests
   destination:
     server: https://kubernetes.default.svc
     namespace: hello-app

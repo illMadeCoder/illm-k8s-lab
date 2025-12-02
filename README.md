@@ -79,9 +79,9 @@ illm-k8s-lab/
 │   ├── k6/                # Load testing infrastructure
 │   └── observability/     # Prometheus, Grafana, Loki
 │
-├── custom-apps/           # Custom application source code
-│   ├── _template/         # Template for new custom apps
-│   └── <app-name>/
+├── images/                # Image source code (Dockerfiles + source)
+│   ├── _template/         # Template for new images
+│   └── <image-name>/
 │       ├── Dockerfile     # Container build definition
 │       ├── src/           # Application source code
 │       └── manifests/     # Kubernetes manifests
@@ -106,7 +106,7 @@ illm-k8s-lab/
 │   └── aks/               # Azure Kubernetes Service
 │
 ├── .github/workflows/     # CI/CD pipelines
-│   └── build-custom-apps.yaml  # Build and push custom app images
+│   └── build-images.yaml  # Build and push images to GHCR
 │
 └── Taskfile.yaml          # Task runner commands
 ```
@@ -237,19 +237,19 @@ task exp:run USERS=10 DURATION=60s
 task exp:undeploy:minikube NAME=http-baseline
 ```
 
-## Custom Applications
+## Images
 
-The `custom-apps/` directory is for deploying your own applications (not just popular images or Helm charts). Each custom app contains source code, a Dockerfile, and Kubernetes manifests.
+The `images/` directory contains source code for building container images. Each image has a Dockerfile, source code, and Kubernetes manifests.
 
-### Creating a Custom App
+### Creating an Image
 
 1. **Copy the template:**
    ```bash
-   cp -r custom-apps/_template custom-apps/my-app
+   cp -r images/_template images/my-app
    ```
 
 2. **Update the files:**
-   - `Dockerfile` - Build instructions for your app
+   - `Dockerfile` - Build instructions for your image
    - `src/` - Your application source code
    - `manifests/deployment.yaml` - Update image path: `ghcr.io/<owner>/illm-k8s-lab/my-app:latest`
    - `manifests/service.yaml` - Update app name
@@ -267,7 +267,7 @@ The `custom-apps/` directory is for deploying your own applications (not just po
      source:
        repoURL: https://github.com/<owner>/illm-k8s-lab.git
        targetRevision: HEAD
-       path: custom-apps/my-app/manifests
+       path: images/my-app/manifests
      destination:
        server: https://kubernetes.default.svc
        namespace: my-app
@@ -281,17 +281,17 @@ The `custom-apps/` directory is for deploying your own applications (not just po
 
 4. **Push to trigger build:**
    ```bash
-   git add custom-apps/my-app argocd-apps/my-app
-   git commit -m "Add my-app custom application"
+   git add images/my-app argocd-apps/my-app
+   git commit -m "Add my-app image"
    git push
    ```
 
-The GitHub Actions workflow automatically builds and pushes images to GHCR when changes are pushed to `custom-apps/<app-name>/`.
+The GitHub Actions workflow automatically builds and pushes images to GHCR when changes are pushed to `images/<image-name>/`.
 
-### Custom App Structure
+### Image Structure
 
 ```
-custom-apps/my-app/
+images/my-app/
 ├── Dockerfile              # Multi-stage build (builder + runtime)
 ├── src/
 │   └── main.go             # Application source code
