@@ -16,18 +16,6 @@ spec:
       targetRevision: 3.16.0
       helm:
         releaseName: k6-operator
-        values: |
-          # k6-operator configuration for lab environment
-          manager:
-            resources:
-              requests:
-                cpu: 50m
-                memory: 64Mi
-              limits:
-                cpu: 100m
-                memory: 128Mi
-          authProxy:
-            enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: k6
