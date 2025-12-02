@@ -8,6 +8,7 @@ metadata:
   labels:
     experiment: hello-app
 spec:
+  serviceAccountName: argo-workflow
   entrypoint: run-experiment
   arguments:
     parameters:
@@ -38,28 +39,16 @@ spec:
         - - name: complete
             template: report-complete
 
-    # Wait for ArgoCD app to be healthy
+    # Wait for pods to be ready
     - name: wait-argocd-healthy
       container:
         image: bitnami/kubectl:latest
         command: [sh, -c]
         args:
           - |
-            echo "Waiting for hello-app to be ready..."
-            for i in $(seq 1 30); do
-              HEALTHY=$(kubectl get applications -n argocd -l experiment=hello-app -o json | \
-                jq -r '.items[] | select(.status.health.status == "Healthy" and .status.sync.status == "Synced") | .metadata.name')
-              if [ -n "$HEALTHY" ]; then
-                echo "Application healthy: $HEALTHY"
-                # Extra wait for pods
-                kubectl wait --for=condition=ready pod -l app=hello-app -n hello-app --timeout=60s
-                exit 0
-              fi
-              echo "Waiting... ($i/30)"
-              sleep 5
-            done
-            echo "Timeout waiting for application"
-            exit 1
+            echo "Waiting for hello-app pods to be ready..."
+            kubectl wait --for=condition=ready pod -l app=hello-app -n hello-app --timeout=120s
+            echo "Pods ready!"
 
     # Run k6 smoke test
     - name: k6-test
