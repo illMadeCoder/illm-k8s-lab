@@ -143,16 +143,16 @@ tasks:
           printf "  - %s\n" "$name"
         done
 
-  deploy:minikube:
-    desc: "Deploy apps to minikube: task deploy:minikube -- <paths...>"
+  argocd-deploy:minikube:
+    desc: "Deploy ArgoCD apps to minikube: task argocd-deploy:minikube -- <paths...>"
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task deploy:minikube -- <path> [path...]"
+          echo "Usage: task argocd-deploy:minikube -- <path> [path...]"
           echo ""
           echo "Examples:"
-          echo "  task deploy:minikube -- argocd-apps/core-app-of-apps.yaml argocd-apps/stacks/loki.yaml"
-          echo "  task deploy:minikube -- argocd-apps/core-app-of-apps.yaml argocd-apps/stacks/elk.yaml"
+          echo "  task argocd-deploy:minikube -- argocd-apps/core-app-of-apps.yaml argocd-apps/stacks/loki.yaml"
+          echo "  task argocd-deploy:minikube -- argocd-apps/core-app-of-apps.yaml argocd-apps/stacks/elk.yaml"
           exit 1
         fi
 
@@ -170,38 +170,51 @@ tasks:
         sleep 5
         kubectl get applications -n argocd
 
-  exp:deploy:minikube:
-    desc: Deploy experiment to minikube via ArgoCD (NAME=<experiment>)
+  exp:argocd-deploy:minikube:
+    desc: "Deploy experiment to minikube: task exp:argocd-deploy:minikube -- <experiment-path>"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:deploy:minikube NAME=<experiment-name>"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:argocd-deploy:minikube -- <experiment-path>"
+          echo ""
+          echo "Examples:"
+          echo "  task exp:argocd-deploy:minikube -- experiments/http-baseline"
+          echo "  task exp:argocd-deploy:minikube -- experiments/multi-cloud-demo"
           exit 1
         fi
-        ARGOCD_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/argocd"
+
+        EXP_PATH="{{.CLI_ARGS}}"
+        ARGOCD_DIR="$EXP_PATH/argocd"
         if [ ! -d "$ARGOCD_DIR" ]; then
           echo "ERROR: argocd directory not found at $ARGOCD_DIR"
           exit 1
         fi
-        echo "Deploying all ArgoCD apps for experiment: {{.NAME}}"
+        echo "Deploying all ArgoCD apps for experiment: $EXP_PATH"
         for f in "$ARGOCD_DIR"/*.yaml; do
           echo "  Applying: $(basename $f)"
           kubectl apply -f "$f"
         done
+        echo ""
         echo "Waiting for ArgoCD to sync..."
         sleep 5
-        kubectl get applications -n argocd -l experiment={{.NAME}}
+        kubectl get applications -n argocd
 
-  exp:undeploy:minikube:
-    desc: Remove experiment from minikube (NAME=<experiment>)
+  exp:argocd-undeploy:minikube:
+    desc: "Remove experiment from minikube: task exp:argocd-undeploy:minikube -- <experiment-path>"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:undeploy:minikube NAME=<experiment-name>"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:argocd-undeploy:minikube -- <experiment-path>"
+          echo ""
+          echo "Examples:"
+          echo "  task exp:argocd-undeploy:minikube -- experiments/http-baseline"
           exit 1
         fi
-        echo "Removing all ArgoCD apps for experiment: {{.NAME}}"
-        kubectl delete application -n argocd -l experiment={{.NAME}} --ignore-not-found
+
+        EXP_PATH="{{.CLI_ARGS}}"
+        EXP_NAME=$(basename "$EXP_PATH")
+        echo "Removing all ArgoCD apps for experiment: $EXP_NAME"
+        kubectl delete application -n argocd -l experiment=$EXP_NAME --ignore-not-found
 
   exp:run:
     desc: Run k6 load test (USERS=10 DURATION=60s SCRIPT=baseline)
@@ -236,28 +249,28 @@ tasks:
           }"
 
   exp:run:prod:
-    desc: Run k6 load test on prod loadgen cluster (NAME=<experiment>)
+    desc: "Run k6 load test on prod: task exp:run:prod -- <experiment-path> [TARGET=url]"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:run:prod NAME=<experiment-name> [USERS=10] [DURATION=60s]"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:run:prod -- <experiment-path> [TARGET=url] [USERS=10] [DURATION=60s]"
           exit 1
         fi
-        TF_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/terraform/prod"
+        EXP_PATH="{{.CLI_ARGS}}"
+        TF_DIR="$EXP_PATH/terraform/prod"
         KUBECONFIG_FILE="$TF_DIR/kubeconfig-loadgen"
 
         if [ ! -f "$KUBECONFIG_FILE" ]; then
           echo "ERROR: Kubeconfig not found: $KUBECONFIG_FILE"
-          echo "Run 'task exp:deploy:prod NAME={{.NAME}}' first"
+          echo "Run 'task exp:deploy:prod -- $EXP_PATH' first"
           exit 1
         fi
 
         # Target URL - must be externally accessible from loadgen cluster
-        # Override with TARGET= if using custom endpoint
         TARGET_URL={{.TARGET | default ""}}
         if [ -z "$TARGET_URL" ]; then
           echo "ERROR: TARGET URL required for cross-cluster load testing"
-          echo "Usage: task exp:run:prod NAME={{.NAME}} TARGET=http://<target-external-ip>"
+          echo "Usage: task exp:run:prod -- $EXP_PATH TARGET=http://<target-external-ip>"
           echo ""
           echo "Get target cluster's external IP:"
           echo "  KUBECONFIG=$TF_DIR/kubeconfig-target kubectl get svc -n demo"
@@ -308,15 +321,16 @@ tasks:
   # Production Deployment (Azure AKS)
   # =============================================================================
   exp:deploy:prod:
-    desc: Deploy experiment to production AKS (NAME=<experiment>)
+    desc: "Deploy experiment to production AKS: task exp:deploy:prod -- <experiment-path>"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:deploy:prod NAME=<experiment-name>"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:deploy:prod -- <experiment-path>"
           exit 1
         fi
-        TF_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/terraform/prod"
-        ARGOCD_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/argocd"
+        EXP_PATH="{{.CLI_ARGS}}"
+        TF_DIR="$EXP_PATH/terraform/prod"
+        ARGOCD_DIR="$EXP_PATH/argocd"
 
         if [ ! -d "$TF_DIR" ]; then
           echo "ERROR: terraform/prod directory not found at $TF_DIR"
@@ -324,7 +338,7 @@ tasks:
         fi
 
         # Deploy infrastructure
-        echo "=== Deploying production infrastructure for: {{.NAME}} ==="
+        echo "=== Deploying production infrastructure for: $EXP_PATH ==="
         cd "$TF_DIR" && terraform init && terraform apply -auto-approve
 
         # Get cluster names from terraform output
@@ -353,47 +367,50 @@ tasks:
         echo "=== Deployment complete ==="
 
   exp:plan:prod:
-    desc: Plan production deployment (NAME=<experiment>)
+    desc: "Plan production deployment: task exp:plan:prod -- <experiment-path>"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:plan:prod NAME=<experiment-name>"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:plan:prod -- <experiment-path>"
           exit 1
         fi
-        TF_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/terraform/prod"
+        EXP_PATH="{{.CLI_ARGS}}"
+        TF_DIR="$EXP_PATH/terraform/prod"
         if [ ! -d "$TF_DIR" ]; then
           echo "ERROR: terraform/prod directory not found at $TF_DIR"
           exit 1
         fi
-        echo "Planning production infrastructure for: {{.NAME}}"
+        echo "Planning production infrastructure for: $EXP_PATH"
         cd "$TF_DIR" && terraform init && terraform plan
 
   exp:undeploy:prod:
-    desc: Destroy production AKS clusters (NAME=<experiment>)
+    desc: "Destroy production AKS clusters: task exp:undeploy:prod -- <experiment-path>"
     prompt: This will DESTROY all production AKS clusters. Continue?
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:undeploy:prod NAME=<experiment-name>"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:undeploy:prod -- <experiment-path>"
           exit 1
         fi
-        TF_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/terraform/prod"
+        EXP_PATH="{{.CLI_ARGS}}"
+        TF_DIR="$EXP_PATH/terraform/prod"
         if [ ! -d "$TF_DIR" ]; then
           echo "ERROR: terraform/prod directory not found at $TF_DIR"
           exit 1
         fi
-        echo "Destroying all production infrastructure for: {{.NAME}}"
+        echo "Destroying all production infrastructure for: $EXP_PATH"
         cd "$TF_DIR" && terraform destroy -auto-approve
 
   exp:kubeconfig:prod:
-    desc: List kubeconfigs for production clusters (NAME=<experiment>)
+    desc: "List kubeconfigs for production clusters: task exp:kubeconfig:prod -- <experiment-path>"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:kubeconfig:prod NAME=<experiment-name>"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:kubeconfig:prod -- <experiment-path>"
           exit 1
         fi
-        TF_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/terraform/prod"
+        EXP_PATH="{{.CLI_ARGS}}"
+        TF_DIR="$EXP_PATH/terraform/prod"
         echo "Available kubeconfigs:"
         ls -1 "$TF_DIR"/kubeconfig-* 2>/dev/null || echo "  No kubeconfigs found. Run exp:deploy:prod first."
         echo ""
@@ -403,15 +420,16 @@ tasks:
   # Full Experiment Lifecycle (deploy → run → destroy)
   # =============================================================================
   exp:run:full:
-    desc: Run full experiment on minikube (deploy → workflow → undeploy)
+    desc: "Run full experiment on minikube: task exp:run:full -- <experiment-path>"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:run:full NAME=<experiment-name> [USERS=10] [DURATION=60s]"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:run:full -- <experiment-path> [USERS=10] [DURATION=60s]"
           exit 1
         fi
 
-        WORKFLOW_FILE="{{.EXPERIMENTS_DIR}}/{{.NAME}}/workflow/experiment.yaml"
+        EXP_PATH="{{.CLI_ARGS}}"
+        WORKFLOW_FILE="$EXP_PATH/workflow/experiment.yaml"
         if [ ! -f "$WORKFLOW_FILE" ]; then
           echo "ERROR: Workflow not found at $WORKFLOW_FILE"
           exit 1
@@ -422,7 +440,7 @@ tasks:
         TARGET={{.TARGET | default "http://demo-app.demo.svc:80"}}
 
         echo "=============================================="
-        echo "  FULL EXPERIMENT: {{.NAME}}"
+        echo "  FULL EXPERIMENT: $EXP_PATH"
         echo "=============================================="
         echo "  Users: $USERS"
         echo "  Duration: $DURATION"
@@ -431,7 +449,7 @@ tasks:
 
         # Step 1: Deploy
         echo "=== Step 1/4: Deploying experiment ==="
-        task exp:deploy:minikube NAME={{.NAME}}
+        task exp:argocd-deploy:minikube -- "$EXP_PATH"
 
         # Step 2: Submit workflow
         echo ""
@@ -463,7 +481,7 @@ tasks:
         # Step 4: Undeploy
         echo ""
         echo "=== Step 4/4: Cleaning up ==="
-        task exp:undeploy:minikube NAME={{.NAME}}
+        task exp:argocd-undeploy:minikube -- "$EXP_PATH"
 
         echo ""
         echo "=============================================="
@@ -471,16 +489,17 @@ tasks:
         echo "=============================================="
 
   exp:run:full:prod:
-    desc: Run full experiment on prod (terraform → deploy → workflow → destroy)
+    desc: "Run full experiment on prod: task exp:run:full:prod -- <experiment-path>"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:run:full:prod NAME=<experiment-name> [USERS=10] [DURATION=60s]"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:run:full:prod -- <experiment-path> [USERS=10] [DURATION=60s]"
           exit 1
         fi
 
-        TF_DIR="{{.EXPERIMENTS_DIR}}/{{.NAME}}/terraform/prod"
-        WORKFLOW_FILE="{{.EXPERIMENTS_DIR}}/{{.NAME}}/workflow/experiment.yaml"
+        EXP_PATH="{{.CLI_ARGS}}"
+        TF_DIR="$EXP_PATH/terraform/prod"
+        WORKFLOW_FILE="$EXP_PATH/workflow/experiment.yaml"
 
         if [ ! -d "$TF_DIR" ]; then
           echo "ERROR: terraform/prod not found at $TF_DIR"
@@ -491,7 +510,7 @@ tasks:
         DURATION={{.DURATION | default "60s"}}
 
         echo "=============================================="
-        echo "  FULL PROD EXPERIMENT: {{.NAME}}"
+        echo "  FULL PROD EXPERIMENT: $EXP_PATH"
         echo "=============================================="
         echo "  Users: $USERS"
         echo "  Duration: $DURATION"
@@ -499,7 +518,7 @@ tasks:
 
         # Step 1: Deploy infrastructure + apps
         echo "=== Step 1/4: Deploying infrastructure ==="
-        task exp:deploy:prod NAME={{.NAME}}
+        task exp:deploy:prod -- "$EXP_PATH"
 
         # Get target URL for cross-cluster testing
         echo ""
@@ -579,28 +598,30 @@ tasks:
         spacectl stack run-manual --id {{.STACK}}
 
   exp:deploy:spacelift:
-    desc: Deploy experiment via Spacelift (NAME=<experiment> CLOUD=azure|aws|both)
+    desc: "Deploy experiment via Spacelift: task exp:deploy:spacelift -- <experiment-path> [CLOUD=azure]"
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:deploy:spacelift NAME=<experiment> [CLOUD=azure]"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:deploy:spacelift -- <experiment-path> [CLOUD=azure|aws|both]"
           exit 1
         fi
+        EXP_PATH="{{.CLI_ARGS}}"
+        EXP_NAME=$(basename "$EXP_PATH")
         CLOUD={{.CLOUD | default "azure"}}
 
         case "$CLOUD" in
           azure)
-            echo "Triggering Spacelift stack: exp-{{.NAME}}-aks"
-            spacectl stack run-manual --id exp-{{.NAME}}-aks
+            echo "Triggering Spacelift stack: exp-${EXP_NAME}-aks"
+            spacectl stack run-manual --id exp-${EXP_NAME}-aks
             ;;
           aws)
-            echo "Triggering Spacelift stack: exp-{{.NAME}}-eks"
-            spacectl stack run-manual --id exp-{{.NAME}}-eks
+            echo "Triggering Spacelift stack: exp-${EXP_NAME}-eks"
+            spacectl stack run-manual --id exp-${EXP_NAME}-eks
             ;;
           both)
             echo "Triggering Spacelift stacks for both Azure and AWS..."
-            spacectl stack run-manual --id exp-{{.NAME}}-aks &
-            spacectl stack run-manual --id exp-{{.NAME}}-eks &
+            spacectl stack run-manual --id exp-${EXP_NAME}-aks &
+            spacectl stack run-manual --id exp-${EXP_NAME}-eks &
             wait
             ;;
           *)
@@ -611,29 +632,31 @@ tasks:
         esac
 
   exp:destroy:spacelift:
-    desc: Destroy experiment via Spacelift (NAME=<experiment> CLOUD=azure|aws|both)
+    desc: "Destroy experiment via Spacelift: task exp:destroy:spacelift -- <experiment-path> [CLOUD=azure]"
     prompt: This will DESTROY cloud infrastructure. Continue?
     cmds:
       - |
-        if [ -z "{{.NAME}}" ]; then
-          echo "Usage: task exp:destroy:spacelift NAME=<experiment> [CLOUD=azure]"
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task exp:destroy:spacelift -- <experiment-path> [CLOUD=azure|aws|both]"
           exit 1
         fi
+        EXP_PATH="{{.CLI_ARGS}}"
+        EXP_NAME=$(basename "$EXP_PATH")
         CLOUD={{.CLOUD | default "azure"}}
 
         case "$CLOUD" in
           azure)
-            echo "Triggering destroy for: exp-{{.NAME}}-aks"
-            spacectl stack task --id exp-{{.NAME}}-aks --tail "terraform destroy -auto-approve"
+            echo "Triggering destroy for: exp-${EXP_NAME}-aks"
+            spacectl stack task --id exp-${EXP_NAME}-aks --tail "terraform destroy -auto-approve"
             ;;
           aws)
-            echo "Triggering destroy for: exp-{{.NAME}}-eks"
-            spacectl stack task --id exp-{{.NAME}}-eks --tail "terraform destroy -auto-approve"
+            echo "Triggering destroy for: exp-${EXP_NAME}-eks"
+            spacectl stack task --id exp-${EXP_NAME}-eks --tail "terraform destroy -auto-approve"
             ;;
           both)
             echo "Triggering destroy for both Azure and AWS..."
-            spacectl stack task --id exp-{{.NAME}}-aks --tail "terraform destroy -auto-approve" &
-            spacectl stack task --id exp-{{.NAME}}-eks --tail "terraform destroy -auto-approve" &
+            spacectl stack task --id exp-${EXP_NAME}-aks --tail "terraform destroy -auto-approve" &
+            spacectl stack task --id exp-${EXP_NAME}-eks --tail "terraform destroy -auto-approve" &
             wait
             ;;
           *)
