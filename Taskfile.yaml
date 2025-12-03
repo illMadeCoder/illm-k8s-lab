@@ -199,21 +199,21 @@ tasks:
         sleep 5
         kubectl get applications -n argocd
 
-  exp:remove:minikube:
-    desc: "Remove experiment from minikube: task exp:remove:minikube -- <experiment-path>"
+  exp:destroy:minikube:
+    desc: "Destroy experiment on minikube: task exp:destroy:minikube -- <experiment-path>"
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task exp:remove:minikube -- <experiment-path>"
+          echo "Usage: task exp:destroy:minikube -- <experiment-path>"
           echo ""
           echo "Examples:"
-          echo "  task exp:remove:minikube -- experiments/http-baseline"
+          echo "  task exp:destroy:minikube -- experiments/http-baseline"
           exit 1
         fi
 
         EXP_PATH="{{.CLI_ARGS}}"
         EXP_NAME=$(basename "$EXP_PATH")
-        echo "Removing all ArgoCD apps for experiment: $EXP_NAME"
+        echo "Destroying all ArgoCD apps for experiment: $EXP_NAME"
         kubectl delete application -n argocd -l experiment=$EXP_NAME --ignore-not-found
 
   exp:run:
@@ -383,13 +383,13 @@ tasks:
         echo "Planning production infrastructure for: $EXP_PATH"
         cd "$TF_DIR" && terraform init && terraform plan
 
-  exp:remove:prod:
-    desc: "Destroy production AKS clusters: task exp:remove:prod -- <experiment-path>"
+  exp:destroy:prod:
+    desc: "Destroy production AKS clusters: task exp:destroy:prod -- <experiment-path>"
     prompt: This will DESTROY all production AKS clusters. Continue?
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task exp:remove:prod -- <experiment-path>"
+          echo "Usage: task exp:destroy:prod -- <experiment-path>"
           exit 1
         fi
         EXP_PATH="{{.CLI_ARGS}}"
@@ -481,7 +481,7 @@ tasks:
         # Step 4: Undeploy
         echo ""
         echo "=== Step 4/4: Cleaning up ==="
-        task exp:remove:minikube -- "$EXP_PATH"
+        task exp:destroy:minikube -- "$EXP_PATH"
 
         echo ""
         echo "=============================================="
