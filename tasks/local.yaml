@@ -3,24 +3,25 @@ version: '3'
 silent: true
 
 vars:
-  KIND_CLUSTER: illm-lab
+  ORCHESTRATOR_CLUSTER: orchestrator
   ARGOCD_NAMESPACE: argocd
   ARGOCD_VALUES: argocd-apps/components/core/argocd/values.yaml
 
 tasks:
   # =============================================================================
-  # Cluster Setup
+  # Orchestrator Setup
   # =============================================================================
   init:
-    desc: Initialize local kind cluster with ArgoCD
+    desc: Initialize the orchestrator cluster (ArgoCD, Argo Workflows, Crossplane)
     cmds:
       - |
-        if kind get clusters 2>/dev/null | grep -q "^{{.KIND_CLUSTER}}$"; then
-          echo "Kind cluster '{{.KIND_CLUSTER}}' already exists"
+        if kind get clusters 2>/dev/null | grep -q "^{{.ORCHESTRATOR_CLUSTER}}$"; then
+          echo "Orchestrator cluster already exists"
         else
-          echo "Creating kind cluster '{{.KIND_CLUSTER}}'..."
-          kind create cluster --name {{.KIND_CLUSTER}} --wait 60s
+          echo "Creating orchestrator cluster..."
+          kind create cluster --name {{.ORCHESTRATOR_CLUSTER}} --wait 60s
         fi
+      - kubectl config use-context kind-{{.ORCHESTRATOR_CLUSTER}}
       - helm repo add argo https://argoproj.github.io/argo-helm 2>/dev/null || true
       - helm repo update argo
       - |
@@ -34,18 +35,34 @@ tasks:
             --values {{.ARGOCD_VALUES}} \
             --wait
         fi
+      - echo ""
+      - echo "Deploying core infrastructure..."
+      - kubectl apply -f argocd-apps/core-app-of-apps.yaml
       - task: password
 
   reset:
-    desc: Delete and recreate the kind cluster
+    desc: Delete all clusters and reinitialize
     cmds:
-      - kind delete cluster --name {{.KIND_CLUSTER}} 2>/dev/null || true
+      - |
+        echo "Deleting all experiment clusters..."
+        for cluster in $(kind get clusters 2>/dev/null); do
+          if [ "$cluster" != "{{.ORCHESTRATOR_CLUSTER}}" ]; then
+            echo "  Deleting: $cluster"
+            kind delete cluster --name "$cluster"
+          fi
+        done
+      - kind delete cluster --name {{.ORCHESTRATOR_CLUSTER}} 2>/dev/null || true
       - task: init
 
   status:
-    desc: Show status of all ArgoCD applications
+    desc: Show all clusters and ArgoCD applications
     cmds:
-      - kubectl get applications -n {{.ARGOCD_NAMESPACE}}
+      - |
+        echo "=== Kind Clusters ==="
+        kind get clusters 2>/dev/null || echo "No clusters"
+        echo ""
+        echo "=== ArgoCD Applications (orchestrator) ==="
+        kubectl --context kind-{{.ORCHESTRATOR_CLUSTER}} get applications -n {{.ARGOCD_NAMESPACE}} 2>/dev/null || echo "Orchestrator not running"
 
   # =============================================================================
   # ArgoCD Helpers
@@ -56,19 +73,19 @@ tasks:
       - |
         echo "ArgoCD Credentials:"
         echo "  Username: admin"
-        echo "  Password: $(kubectl -n {{.ARGOCD_NAMESPACE}} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
+        echo "  Password: $(kubectl --context kind-{{.ORCHESTRATOR_CLUSTER}} -n {{.ARGOCD_NAMESPACE}} get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)"
 
   ui:
     desc: Port-forward ArgoCD UI to localhost:8080
     cmds:
       - echo "ArgoCD UI available at https://localhost:8080"
-      - kubectl port-forward svc/argocd-server -n {{.ARGOCD_NAMESPACE}} 8080:443
+      - kubectl --context kind-{{.ORCHESTRATOR_CLUSTER}} port-forward svc/argocd-server -n {{.ARGOCD_NAMESPACE}} 8080:443
 
   # =============================================================================
   # Deployment (for tinkering)
   # =============================================================================
   deploy:
-    desc: "Deploy ArgoCD apps: task local:deploy -- <paths...>"
+    desc: "Deploy ArgoCD apps to orchestrator: task local:deploy -- <paths...>"
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
@@ -85,39 +102,23 @@ tasks:
             exit 1
           fi
           echo "=== Deploying: $path ==="
-          kubectl apply -f "$path"
+          kubectl --context kind-{{.ORCHESTRATOR_CLUSTER}} apply -f "$path"
         done
 
         echo ""
         echo "Waiting for ArgoCD to sync..."
         sleep 5
-        kubectl get applications -n argocd
+        kubectl --context kind-{{.ORCHESTRATOR_CLUSTER}} get applications -n argocd
 
   # =============================================================================
   # Experiment Lifecycle
   # =============================================================================
-  destroy:
-    desc: "Destroy experiment: task local:destroy -- <experiment-path>"
-    cmds:
-      - |
-        if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task local:destroy -- <experiment-path>"
-          echo ""
-          echo "Example: task local:destroy -- experiments/http-baseline"
-          exit 1
-        fi
-
-        EXP_PATH="{{.CLI_ARGS}}"
-        EXP_NAME=$(basename "$EXP_PATH")
-        echo "Destroying experiment: $EXP_NAME"
-        kubectl delete application -n argocd -l experiment=$EXP_NAME --ignore-not-found
-
   conduct:
-    desc: "Conduct experiment (idempotent): task local:conduct -- <experiment-path> [STACK=loki]"
+    desc: "Conduct experiment: task local:conduct -- <experiment-path>"
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task local:conduct -- <experiment-path> [STACK=loki|elk] [USERS=10] [DURATION=60s]"
+          echo "Usage: task local:conduct -- <experiment-path> [USERS=10] [DURATION=60s]"
           exit 1
         fi
 
@@ -132,76 +133,90 @@ tasks:
 
         USERS={{.USERS | default "10"}}
         DURATION={{.DURATION | default "60s"}}
-        TARGET={{.TARGET | default "http://demo-app.demo.svc:80"}}
-        STACK={{.STACK | default ""}}
 
         echo "=============================================="
         echo "  CONDUCTING EXPERIMENT: $EXP_NAME"
         echo "=============================================="
         echo "  Users: $USERS"
         echo "  Duration: $DURATION"
-        echo "  Target: $TARGET"
-        echo "  Stack: ${STACK:-none}"
         echo ""
 
-        # Step 1: Clean up any previous experiments
-        echo "=== Step 1/6: Cleaning up previous experiments ==="
-        for dir in experiments/*/; do
-          name=$(basename "$dir")
-          kubectl delete application -n argocd -l experiment=$name --ignore-not-found
-        done
-        sleep 3
-
-        # Step 2: Deploy core infrastructure
-        echo ""
-        echo "=== Step 2/6: Deploying core infrastructure ==="
-        kubectl apply -f argocd-apps/core-app-of-apps.yaml
-        echo "Waiting for core apps to sync..."
-        sleep 10
-
-        # Step 3: Deploy observability stack (optional)
-        if [ -n "$STACK" ]; then
-          echo ""
-          echo "=== Step 3/6: Deploying $STACK stack ==="
-          STACK_FILE="argocd-apps/stacks/${STACK}.yaml"
-          if [ ! -f "$STACK_FILE" ]; then
-            echo "ERROR: Stack not found: $STACK_FILE"
-            exit 1
+        # Step 1: Discover clusters from experiment folders
+        echo "=== Step 1/5: Discovering clusters ==="
+        CLUSTERS=""
+        for cluster_dir in "$EXP_PATH"/*/; do
+          if [ -f "$cluster_dir/cluster.yaml" ]; then
+            cluster_name=$(basename "$cluster_dir")
+            CLUSTERS="$CLUSTERS $cluster_name"
+            echo "  Found: $cluster_name"
           fi
-          kubectl apply -f "$STACK_FILE"
-          sleep 5
-        else
-          echo ""
-          echo "=== Step 3/6: Skipping stack (none specified) ==="
-        fi
+        done
 
-        # Step 4: Deploy experiment
-        echo ""
-        echo "=== Step 4/6: Deploying experiment ==="
-        ARGOCD_DIR="$EXP_PATH/argocd"
-        if [ ! -d "$ARGOCD_DIR" ]; then
-          echo "ERROR: argocd directory not found at $ARGOCD_DIR"
+        if [ -z "$CLUSTERS" ]; then
+          echo "ERROR: No clusters found (no */cluster.yaml files)"
           exit 1
         fi
-        for f in "$ARGOCD_DIR"/*.yaml; do
-          echo "  Applying: $(basename $f)"
-          kubectl apply -f "$f"
-        done
-        echo "Waiting for ArgoCD to sync..."
-        sleep 5
 
-        # Step 5: Submit and wait for workflow
+        # Step 2: Create kind clusters for experiment
         echo ""
-        echo "=== Step 5/6: Running workflow ==="
+        echo "=== Step 2/5: Creating experiment clusters ==="
+        for cluster in $CLUSTERS; do
+          full_name="${EXP_NAME}-${cluster}"
+          if kind get clusters 2>/dev/null | grep -q "^${full_name}$"; then
+            echo "  Cluster '$full_name' already exists"
+          else
+            echo "  Creating cluster '$full_name'..."
+            kind create cluster --name "$full_name" --wait 60s
+          fi
+        done
+
+        # Step 3: Deploy ArgoCD apps to each cluster
+        echo ""
+        echo "=== Step 3/5: Deploying apps to clusters ==="
+        for cluster in $CLUSTERS; do
+          full_name="${EXP_NAME}-${cluster}"
+          cluster_dir="$EXP_PATH/$cluster"
+          argocd_dir="$cluster_dir/argocd"
+
+          echo "  Deploying to $full_name..."
+          kubectl config use-context "kind-${full_name}"
+
+          # Apply ArgoCD apps if they exist
+          if [ -d "$argocd_dir" ] && ls "$argocd_dir"/*.yaml >/dev/null 2>&1; then
+            for f in "$argocd_dir"/*.yaml; do
+              echo "    Applying: $(basename $f)"
+              kubectl apply -f "$f"
+            done
+          fi
+
+          # Apply Crossplane claims if they exist
+          crossplane_dir="$cluster_dir/crossplane"
+          if [ -d "$crossplane_dir" ] && ls "$crossplane_dir"/*.yaml >/dev/null 2>&1; then
+            for f in "$crossplane_dir"/*.yaml; do
+              echo "    Applying Crossplane: $(basename $f)"
+              kubectl apply -f "$f"
+            done
+          fi
+        done
+
+        # Step 4: Run workflow on orchestrator
+        echo ""
+        echo "=== Step 4/5: Running workflow on orchestrator ==="
+        kubectl config use-context kind-{{.ORCHESTRATOR_CLUSTER}}
+
+        # Determine target URL (first cluster's service)
+        TARGET_CLUSTER="${EXP_NAME}-target"
+        TARGET_URL="http://demo-app.demo.svc:80"
+
         WORKFLOW_NAME=$(argo submit "$WORKFLOW_FILE" \
           -p users="$USERS" \
           -p duration="$DURATION" \
-          -p target-url="$TARGET" \
+          -p target-url="$TARGET_URL" \
           -o name -n argo-workflows 2>/dev/null || \
           kubectl create -f "$WORKFLOW_FILE" -o name)
-        echo "Workflow: $WORKFLOW_NAME"
+        echo "  Workflow: $WORKFLOW_NAME"
 
-        echo "Waiting for workflow completion..."
+        echo "  Waiting for workflow completion..."
         argo wait "$WORKFLOW_NAME" -n argo-workflows 2>/dev/null || \
           kubectl wait "$WORKFLOW_NAME" --for=condition=Completed --timeout=30m -n argo-workflows
 
@@ -210,12 +225,46 @@ tasks:
         argo get "$WORKFLOW_NAME" -n argo-workflows 2>/dev/null || \
           kubectl get "$WORKFLOW_NAME" -n argo-workflows -o yaml
 
-        # Step 6: Cleanup experiment
+        # Step 5: Cleanup experiment clusters
         echo ""
-        echo "=== Step 6/6: Cleaning up experiment ==="
-        kubectl delete application -n argocd -l experiment=$EXP_NAME --ignore-not-found
+        echo "=== Step 5/5: Cleaning up experiment clusters ==="
+        for cluster in $CLUSTERS; do
+          full_name="${EXP_NAME}-${cluster}"
+          echo "  Deleting cluster: $full_name"
+          kind delete cluster --name "$full_name"
+        done
+
+        kubectl config use-context kind-{{.ORCHESTRATOR_CLUSTER}}
 
         echo ""
         echo "=============================================="
         echo "  EXPERIMENT COMPLETE"
         echo "=============================================="
+
+  destroy:
+    desc: "Destroy experiment clusters: task local:destroy -- <experiment-path>"
+    cmds:
+      - |
+        if [ -z "{{.CLI_ARGS}}" ]; then
+          echo "Usage: task local:destroy -- <experiment-path>"
+          echo ""
+          echo "Example: task local:destroy -- experiments/http-baseline"
+          exit 1
+        fi
+
+        EXP_PATH="{{.CLI_ARGS}}"
+        EXP_NAME=$(basename "$EXP_PATH")
+
+        echo "Destroying experiment clusters for: $EXP_NAME"
+        for cluster_dir in "$EXP_PATH"/*/; do
+          if [ -f "$cluster_dir/cluster.yaml" ]; then
+            cluster_name=$(basename "$cluster_dir")
+            full_name="${EXP_NAME}-${cluster_name}"
+            if kind get clusters 2>/dev/null | grep -q "^${full_name}$"; then
+              echo "  Deleting: $full_name"
+              kind delete cluster --name "$full_name"
+            fi
+          fi
+        done
+
+        echo "Done."
