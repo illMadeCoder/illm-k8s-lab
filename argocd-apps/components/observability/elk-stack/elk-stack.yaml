@@ -1,45 +1,41 @@
 ---
-# Multi-Cloud Demo - Target Cluster ArgoCD Application
-# Deploys demo app + Crossplane claims to the target cluster
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: multi-cloud-demo-target
+  name: elk-stack
   namespace: argocd
-  labels:
-    experiment: multi-cloud-demo
-    cluster: target
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   sources:
-    # Deploy demo application
+    - repoURL: https://helm.elastic.co
+      chart: eck-stack
+      targetRevision: 0.17.0
+      helm:
+        releaseName: elk
+        valueFiles:
+          - $values/argocd-apps/components/observability/elk-stack/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: argocd-apps/components/apps/demo-app
+      ref: values
+    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
+      targetRevision: HEAD
+      path: argocd-apps/components/observability/elk-stack
       directory:
-        exclude: 'demo-app.yaml'
-
-    # Deploy Crossplane claims for this experiment
-    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
-      targetRevision: HEAD
-      path: experiments/multi-cloud-demo/crossplane
-
-    # Deploy k6 scripts ConfigMap
-    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
-      targetRevision: HEAD
-      path: experiments/multi-cloud-demo/k6
-
+        include: '{*-httproute.yaml,*-rbac.yaml}'
   destination:
     server: https://kubernetes.default.svc
-    namespace: demo
+    namespace: observability
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
     retry:
       limit: 5
       backoff:

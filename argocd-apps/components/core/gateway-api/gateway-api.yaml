@@ -1,32 +1,36 @@
-# HTTP Baseline - Target Cluster
-# Deploys the application being load tested
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: http-baseline-target
+  name: gateway-api
   namespace: argocd
-  labels:
-    experiment: http-baseline
-    cluster: target
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
+    - repoURL: https://charts.bitnami.com/bitnami
+      chart: contour
+      targetRevision: 21.1.4
+      helm:
+        releaseName: contour
+        valueFiles:
+          - $values/argocd-apps/components/core/gateway-api/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: argocd-apps/components/apps/demo-app
-      directory:
-        recurse: false
-        # Exclude demo-app.yaml (ArgoCD app definition) - deploy manifests directly
-        exclude: 'demo-app.yaml'
-
+      ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: demo
+    namespace: projectcontour
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

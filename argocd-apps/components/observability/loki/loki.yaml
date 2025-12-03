@@ -1,39 +1,32 @@
 ---
-# Multi-Cloud Demo - Target Cluster ArgoCD Application
-# Deploys demo app + Crossplane claims to the target cluster
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: multi-cloud-demo-target
+  name: loki
   namespace: argocd
-  labels:
-    experiment: multi-cloud-demo
-    cluster: target
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
-    # Deploy demo application
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki
+      targetRevision: 6.28.0
+      helm:
+        releaseName: loki
+        valueFiles:
+          - $values/argocd-apps/components/observability/loki/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: argocd-apps/components/apps/demo-app
+      ref: values
+    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
+      targetRevision: HEAD
+      path: argocd-apps/components/observability/loki
       directory:
-        exclude: 'demo-app.yaml'
-
-    # Deploy Crossplane claims for this experiment
-    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
-      targetRevision: HEAD
-      path: experiments/multi-cloud-demo/crossplane
-
-    # Deploy k6 scripts ConfigMap
-    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
-      targetRevision: HEAD
-      path: experiments/multi-cloud-demo/k6
-
+        include: '*-httproute.yaml'
   destination:
     server: https://kubernetes.default.svc
-    namespace: demo
+    namespace: observability
   syncPolicy:
     automated:
       prune: true

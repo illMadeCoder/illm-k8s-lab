@@ -1,0 +1,39 @@
+# Core Infrastructure App-of-Apps
+# Stack-agnostic platform components - always deployed
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: core-infrastructure
+  namespace: argocd
+  labels:
+    layer: core
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    # TLS/Certificate management
+    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
+      targetRevision: HEAD
+      path: argocd-apps/components/core/cert-manager
+      directory:
+        recurse: false
+        include: 'cert-manager*.yaml'
+
+    # Gateway/Ingress
+    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
+      targetRevision: HEAD
+      path: argocd-apps/components/core/gateway-api
+      directory:
+        recurse: false
+        include: 'gateway-api.yaml'
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

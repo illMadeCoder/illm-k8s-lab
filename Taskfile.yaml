@@ -4,7 +4,7 @@ silent: true
 
 vars:
   ARGOCD_NAMESPACE: argocd
-  ARGOCD_VALUES: argocd-apps/argocd/values.yaml
+  ARGOCD_VALUES: argocd-apps/components/core/argocd/values.yaml
   EXPERIMENTS_DIR: experiments
 
 tasks:
