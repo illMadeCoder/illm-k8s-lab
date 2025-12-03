@@ -267,9 +267,11 @@ tasks:
         echo "=== Step 5/6: Running workflow on orchestrator ==="
         kubectl config use-context kind-{{.ORCHESTRATOR_CLUSTER}}
 
-        # Determine target URL (first cluster's service)
-        TARGET_CLUSTER="${EXP_NAME}-target"
-        TARGET_URL="http://demo-app.demo.svc:80"
+        # Determine target URL (target cluster's Docker IP + NodePort)
+        TARGET_CONTAINER="${EXP_NAME}-target-control-plane"
+        TARGET_IP=$(docker inspect "$TARGET_CONTAINER" | jq -r '.[0].NetworkSettings.Networks.kind.IPAddress')
+        TARGET_URL="http://${TARGET_IP}:30080"
+        echo "  Target URL: $TARGET_URL"
 
         WORKFLOW_NAME=$(argo submit "$WORKFLOW_FILE" \
           -p users="$USERS" \

@@ -13,6 +13,7 @@ metadata:
 spec:
   project: default
   sources:
+    # Demo app deployment and ClusterIP service
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
       path: argocd-apps/components/apps/demo-app
@@ -20,6 +21,13 @@ spec:
         recurse: false
         # Exclude demo-app.yaml (ArgoCD app definition) - deploy manifests directly
         exclude: 'demo-app.yaml'
+    # NodePort service for cross-cluster access from orchestrator
+    - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
+      targetRevision: HEAD
+      path: experiments/http-baseline/target/argocd
+      directory:
+        recurse: false
+        include: 'nodeport-service.yaml'
 
   destination:
     name: target  # Registered cluster name (experiment-name-target)

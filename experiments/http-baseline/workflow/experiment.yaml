@@ -17,7 +17,7 @@ spec:
       - name: duration
         value: "60s"
       - name: target-url
-        value: "http://demo-app.demo.svc:80"
+        value: "http://localhost:30080"
 
   templates:
     - name: run-experiment
@@ -39,16 +39,33 @@ spec:
         - - name: signal-complete
             template: complete
 
-    # Wait for demo-app pods to be ready
+    # Wait for ArgoCD application to be synced and healthy
     - name: wait-argocd-healthy
       container:
         image: bitnami/kubectl:latest
         command: [sh, -c]
         args:
           - |
-            echo "Waiting for demo-app pods to be ready..."
-            kubectl wait --for=condition=ready pod -l app=demo-app -n demo --timeout=120s
-            echo "Pods ready!"
+            echo "Waiting for ArgoCD app 'http-baseline-target' to be healthy..."
+
+            # Wait up to 3 minutes for app to sync and become healthy
+            for i in $(seq 1 36); do
+              HEALTH=$(kubectl get application http-baseline-target -n argocd -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown")
+              SYNC=$(kubectl get application http-baseline-target -n argocd -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+
+              echo "  Attempt $i: Health=$HEALTH, Sync=$SYNC"
+
+              if [ "$HEALTH" = "Healthy" ] && [ "$SYNC" = "Synced" ]; then
+                echo "ArgoCD app is healthy and synced!"
+                exit 0
+              fi
+
+              sleep 5
+            done
+
+            echo "ERROR: Timeout waiting for ArgoCD app to become healthy"
+            kubectl get application http-baseline-target -n argocd -o yaml
+            exit 1
 
     # Run k6 load test
     - name: k6-test
