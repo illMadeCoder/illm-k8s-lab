@@ -170,16 +170,16 @@ tasks:
         sleep 5
         kubectl get applications -n argocd
 
-  exp:argocd-deploy:minikube:
-    desc: "Deploy experiment to minikube: task exp:argocd-deploy:minikube -- <experiment-path>"
+  exp:deploy:minikube:
+    desc: "Deploy experiment to minikube: task exp:deploy:minikube -- <experiment-path>"
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task exp:argocd-deploy:minikube -- <experiment-path>"
+          echo "Usage: task exp:deploy:minikube -- <experiment-path>"
           echo ""
           echo "Examples:"
-          echo "  task exp:argocd-deploy:minikube -- experiments/http-baseline"
-          echo "  task exp:argocd-deploy:minikube -- experiments/multi-cloud-demo"
+          echo "  task exp:deploy:minikube -- experiments/http-baseline"
+          echo "  task exp:deploy:minikube -- experiments/multi-cloud-demo"
           exit 1
         fi
 
@@ -199,15 +199,15 @@ tasks:
         sleep 5
         kubectl get applications -n argocd
 
-  exp:argocd-undeploy:minikube:
-    desc: "Remove experiment from minikube: task exp:argocd-undeploy:minikube -- <experiment-path>"
+  exp:remove:minikube:
+    desc: "Remove experiment from minikube: task exp:remove:minikube -- <experiment-path>"
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task exp:argocd-undeploy:minikube -- <experiment-path>"
+          echo "Usage: task exp:remove:minikube -- <experiment-path>"
           echo ""
           echo "Examples:"
-          echo "  task exp:argocd-undeploy:minikube -- experiments/http-baseline"
+          echo "  task exp:remove:minikube -- experiments/http-baseline"
           exit 1
         fi
 
@@ -383,13 +383,13 @@ tasks:
         echo "Planning production infrastructure for: $EXP_PATH"
         cd "$TF_DIR" && terraform init && terraform plan
 
-  exp:undeploy:prod:
-    desc: "Destroy production AKS clusters: task exp:undeploy:prod -- <experiment-path>"
+  exp:remove:prod:
+    desc: "Destroy production AKS clusters: task exp:remove:prod -- <experiment-path>"
     prompt: This will DESTROY all production AKS clusters. Continue?
     cmds:
       - |
         if [ -z "{{.CLI_ARGS}}" ]; then
-          echo "Usage: task exp:undeploy:prod -- <experiment-path>"
+          echo "Usage: task exp:remove:prod -- <experiment-path>"
           exit 1
         fi
         EXP_PATH="{{.CLI_ARGS}}"
@@ -449,7 +449,7 @@ tasks:
 
         # Step 1: Deploy
         echo "=== Step 1/4: Deploying experiment ==="
-        task exp:argocd-deploy:minikube -- "$EXP_PATH"
+        task exp:deploy:minikube -- "$EXP_PATH"
 
         # Step 2: Submit workflow
         echo ""
@@ -481,7 +481,7 @@ tasks:
         # Step 4: Undeploy
         echo ""
         echo "=== Step 4/4: Cleaning up ==="
-        task exp:argocd-undeploy:minikube -- "$EXP_PATH"
+        task exp:remove:minikube -- "$EXP_PATH"
 
         echo ""
         echo "=============================================="
