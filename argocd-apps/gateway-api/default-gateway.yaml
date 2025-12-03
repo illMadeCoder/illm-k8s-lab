@@ -1,4 +1,16 @@
 ---
+# ContourConfiguration for the GatewayClass to reference
+apiVersion: projectcontour.io/v1alpha1
+kind: ContourConfiguration
+metadata:
+  name: contour
+  namespace: projectcontour
+spec:
+  envoy:
+    service:
+      namespace: projectcontour
+      name: contour-envoy
+---
 # GatewayClass defines which controller handles the Gateway
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
@@ -6,6 +18,11 @@ metadata:
   name: contour
 spec:
   controllerName: projectcontour.io/projectcontour/contour
+  parametersRef:
+    group: projectcontour.io
+    kind: ContourConfiguration
+    name: contour
+    namespace: projectcontour
 ---
 # Default Gateway for the lab environment
 # This creates a single entry point for HTTP traffic
