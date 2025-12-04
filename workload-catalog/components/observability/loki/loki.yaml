@@ -1,32 +1,41 @@
-# Hello App Experiment - Target
-# Deploys the custom hello-app for load testing
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: hello-app-experiment
+  name: loki
   namespace: argocd
-  labels:
-    experiment: hello-app
-    cluster: target
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
-    # Deploy hello-app manifests
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki
+      targetRevision: 6.28.0
+      helm:
+        releaseName: loki
+        valueFiles:
+          - $values/argocd-apps/components/observability/loki/values.yaml
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: workload-catalog/components/apps/hello-app/k8s
-    # Deploy k6 test scripts ConfigMap
+      ref: values
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: experiments/hello-app/k6
+      path: workload-catalog/components/observability/loki
+      directory:
+        include: '*-httproute.yaml'
   destination:
     server: https://kubernetes.default.svc
-    namespace: hello-app
+    namespace: observability
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

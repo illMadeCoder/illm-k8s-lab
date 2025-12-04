@@ -5,7 +5,7 @@ silent: true
 vars:
   ORCHESTRATOR_CLUSTER: orchestrator
   ARGOCD_NAMESPACE: argocd
-  ARGOCD_VALUES: argocd-apps/components/core/argocd/values.yaml
+  ARGOCD_VALUES: workload-catalog/components/core/argocd/values.yaml
 
 tasks:
   # Helper to clear stale docker env from minikube
@@ -51,7 +51,7 @@ tasks:
         fi
       - echo ""
       - echo "Deploying core infrastructure..."
-      - kubectl apply -f argocd-apps/core-app-of-apps.yaml
+      - kubectl apply -f workload-catalog/core-app-of-apps.yaml
       - task: password
 
   reset:

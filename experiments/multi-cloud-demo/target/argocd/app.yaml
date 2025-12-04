@@ -17,7 +17,7 @@ spec:
     # Deploy demo application
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: argocd-apps/components/apps/demo-app
+      path: workload-catalog/components/apps/demo-app
       directory:
         exclude: 'demo-app.yaml'
 

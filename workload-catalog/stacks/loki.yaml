@@ -1,29 +1,37 @@
-# Hello App Experiment - Target
-# Deploys the custom hello-app for load testing
+# Loki Logging Stack
+# Deploys: Loki + Promtail (log shipper)
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: hello-app-experiment
+  name: stack-loki
   namespace: argocd
   labels:
-    experiment: hello-app
-    cluster: target
+    layer: stack
+    stack: loki
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
-    # Deploy hello-app manifests
+    # Logs - Loki
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: workload-catalog/components/apps/hello-app/k8s
-    # Deploy k6 test scripts ConfigMap
+      path: workload-catalog/components/observability/loki
+      directory:
+        recurse: false
+        include: 'loki.yaml'
+
+    # Logs - Promtail (log shipper for Loki)
     - repoURL: https://github.com/illMadeCoder/illm-k8s-lab.git
       targetRevision: HEAD
-      path: experiments/hello-app/k6
+      path: workload-catalog/components/observability/promtail
+      directory:
+        recurse: false
+        include: 'promtail.yaml'
+
   destination:
     server: https://kubernetes.default.svc
-    namespace: hello-app
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
