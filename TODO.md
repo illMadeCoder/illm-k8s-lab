@@ -56,56 +56,63 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 1.2 Raspberry Pi Cluster & Ansible
+### 1.2 Home Lab Cluster with Talos Linux
 
-**Goal:** Build a home lab Kubernetes cluster on Raspberry Pi, provisioned with Ansible
+**Goal:** Build a home lab Kubernetes cluster on bare metal using Talos Linux
 
-*Bridge between Kind (single-node dev) and cloud (production). Real hardware, real networking, real constraints.*
+*Bridge between Kind (dev) and cloud (production). Immutable OS, declarative config, production patterns.*
 
 **Learning objectives:**
-- Understand Ansible for bare-metal/VM provisioning
-- Configure multi-node Kubernetes on physical hardware
-- Handle real networking (DHCP, DNS, load balancing)
-- Practice Day 2 operations on physical infrastructure
+- Understand Talos Linux as an immutable, secure Kubernetes OS
+- Manage infrastructure declaratively (no SSH, API-driven)
+- Use Ansible for initial provisioning/PXE boot setup
+- Practice GitOps for both OS and cluster configuration
+
+**Hardware:**
+- [ ] N100 Mini PC (start with 1, expand to 3)
+  - [ ] Recommended: Beelink S12 Pro, GMKtec G3, or similar (~$150-180)
+  - [ ] 16GB RAM, 500GB NVMe
+  - [ ] Single GbE sufficient (software network separation like cloud)
+- [ ] Network switch (5-port gigabit, ~$20)
+- [ ] Ethernet cables
 
 **Tasks:**
-- [ ] Create `experiments/raspberry-pi-cluster/`
-- [ ] Hardware setup:
-  - [ ] 3+ Raspberry Pi 4/5 nodes (1 control plane, 2+ workers)
-  - [ ] Network switch, power supply
-  - [ ] SD cards or USB SSDs
-- [ ] Ansible fundamentals:
-  - [ ] Inventory file (static and dynamic)
-  - [ ] Playbooks for base OS configuration
-  - [ ] Roles for reusable configuration (k8s-common, k8s-control-plane, k8s-worker)
-  - [ ] Variables and templates (Jinja2)
-  - [ ] Handlers for service restarts
-  - [ ] Vault for secrets (ansible-vault)
-- [ ] OS provisioning:
-  - [ ] Ubuntu Server or Raspberry Pi OS (64-bit)
-  - [ ] SSH key distribution
-  - [ ] Hostname, timezone, locale configuration
-  - [ ] Package updates and hardening
-- [ ] Kubernetes installation:
-  - [ ] Container runtime (containerd)
-  - [ ] kubeadm, kubelet, kubectl
-  - [ ] Control plane initialization
-  - [ ] Worker node join
-  - [ ] CNI installation (Cilium or Calico)
+- [ ] Create `experiments/talos-home-lab/`
+- [ ] Ansible for initial setup:
+  - [ ] Inventory file for home lab nodes
+  - [ ] Playbook to prepare USB/PXE boot media
+  - [ ] Talos image customization (extensions, config)
+  - [ ] Network boot infrastructure (optional, for multi-node)
+- [ ] Talos Linux fundamentals:
+  - [ ] Understand machine config vs cluster config
+  - [ ] Generate configs with `talosctl gen config`
+  - [ ] Apply configs with `talosctl apply-config`
+  - [ ] Bootstrap cluster with `talosctl bootstrap`
+  - [ ] No SSH - all management via talosctl API
+- [ ] Talos configuration as code:
+  - [ ] Machine configs in Git
+  - [ ] Patch files for node-specific overrides
+  - [ ] Encrypted secrets with sops/age
 - [ ] Networking:
-  - [ ] Static IPs or DHCP reservations
+  - [ ] Static IPs via machine config
   - [ ] MetalLB for LoadBalancer services
-  - [ ] Local DNS (Pi-hole or CoreDNS)
-  - [ ] Ingress controller (Contour/nginx)
+  - [ ] Cilium CNI (default in Talos)
+  - [ ] Ingress controller (Contour)
 - [ ] Storage:
   - [ ] Local path provisioner
-  - [ ] NFS for shared storage (optional)
+  - [ ] Mayastor or OpenEBS (optional, for multi-node)
 - [ ] ArgoCD bootstrap:
-  - [ ] Deploy ArgoCD to Pi cluster
+  - [ ] Deploy ArgoCD to Talos cluster
   - [ ] Connect to same Git repo as Kind
   - [ ] Multi-cluster GitOps pattern
-- [ ] Document Ansible patterns and Pi cluster architecture
-- [ ] **ADR:** Document Ansible vs other config management (Puppet, Chef, Salt)
+- [ ] Cluster operations:
+  - [ ] Upgrade Talos OS declaratively
+  - [ ] Upgrade Kubernetes version
+  - [ ] Add worker nodes
+  - [ ] Backup and restore etcd
+- [ ] Document Talos patterns and home lab architecture
+- [ ] **ADR:** Document Talos vs K3s vs kubeadm for bare metal
+- [ ] **ADR:** Document Ansible role in Talos workflow
 
 ---
 
@@ -2379,8 +2386,9 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
   - [ ] ADR-013: ML platform selection
   - [ ] ADR-014: Vector database selection
   - [ ] ADR-015: Multi-cloud strategy (Crossplane vs Terraform)
-  - [ ] ADR-016: Config management (Ansible vs Puppet vs Chef)
-  - [ ] ADR-017: IDP strategy (Backstage vs Port vs Cortex)
+  - [ ] ADR-016: Bare metal K8s (Talos vs K3s vs kubeadm)
+  - [ ] ADR-017: Config management (Ansible role in Talos workflow)
+  - [ ] ADR-018: IDP strategy (Backstage vs Port vs Cortex)
 
 ---
 
@@ -2467,7 +2475,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 | Phase | Focus | Experiments | Key Skills |
 |-------|-------|-------------|------------|
-| 1 | Platform Bootstrap & GitOps | 5 | GitOps, Raspberry Pi/Ansible, Spacelift, Crossplane, FinOps |
+| 1 | Platform Bootstrap & GitOps | 5 | GitOps, Talos Linux/N100, Spacelift, Crossplane, FinOps |
 | 2 | CI/CD & Supply Chain Security | 4 | Image building, scanning, signing, SBOM, registries |
 | 3 | Security Foundations | 8 | ESO, Vault, cert-manager, policies, identity, multi-tenancy |
 | 4 | Observability | 6 | Prometheus, SLOs, MinIO, Loki, OpenTelemetry, Thanos |
@@ -2491,6 +2499,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 ## Notes
 
 - All experiments follow `experiments/_template/` structure
-- **Environment progression**: Kind (dev) → Raspberry Pi (home lab) → Cloud (prod)
-- Ansible for bare-metal/Pi, Spacelift+Terraform for cloud, Crossplane for K8s-native
+- **Environment progression**: Kind (dev) → Talos on N100 (home lab) → AKS/EKS (cloud)
+- Talos for home lab (immutable OS), Spacelift+Terraform for cloud, Crossplane for K8s-native
+- Ansible for initial Talos provisioning, not ongoing management
 - Each experiment should have a portfolio-ready README
