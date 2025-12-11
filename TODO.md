@@ -116,23 +116,23 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 1.3 Spacelift Setup (Cloud IaC)
+### 1.3 GitLab CI Setup (Cloud IaC)
 
-**Goal:** Establish Spacelift for Terraform state management and IaC orchestration
+**Goal:** Establish GitLab CI for Terraform state management and IaC orchestration
 
 **Learning objectives:**
-- Understand Spacelift stacks, contexts, and policies
-- Configure Kind for multi-cluster experiments
+- Understand GitLab CI pipelines for Terraform
+- Configure GitLab-managed Terraform state backend
 - Set up GitOps workflow for infrastructure changes
 
 **Tasks:**
-- [ ] Create Spacelift account and connect GitHub repo
-- [ ] Create `spacelift-root` stack (administrative=true)
-- [ ] Configure cloud credential contexts (Azure, AWS) in Spacelift UI
+- [x] Create GitLab account and connect GitHub repo (mirror)
+- [x] Create `.gitlab-ci.yml` for Terraform pipelines
+- [x] Configure GitLab CI variables for cloud credentials (Azure, AWS)
+- [x] Deploy azure-foundation via GitLab CI (Resource Group, Key Vault, ESO SP)
 - [ ] Set up Kind cluster with sufficient resources
-- [ ] Verify Spacelift can plan/apply to local state
-- [ ] Document Spacelift workflow patterns
-- [x] **ADR:** Document why Spacelift over Terraform Cloud/Atlantis (see `docs/adrs/ADR-001-spacelift-for-iac-orchestration.md`)
+- [ ] Document GitLab CI workflow patterns
+- [x] **ADR:** Document why GitLab CI over Spacelift/Terraform Cloud (see `docs/adrs/ADR-001-gitlab-ci-for-iac.md`)
 
 ---
 
@@ -319,21 +319,31 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 **Goal:** Establish credential management foundation for cloud deployments
 
-*This phase unblocks all cloud-dependent work by setting up External Secrets Operator to sync credentials from cloud secret managers.*
+*This phase unblocks all cloud-dependent work by setting up secrets sync from cloud secret managers into Kubernetes.*
 
 **Learning objectives:**
-- Understand External Secrets Operator architecture
+- Understand External Secrets Operator vs Vault Agent Injector trade-offs
 - Configure cloud secret store providers (Azure Key Vault, AWS Secrets Manager)
-- Bootstrap credential flow for Crossplane and Spacelift
+- Bootstrap credential flow for Crossplane and other platform components
+
+**Current state:**
+- [x] Azure Key Vault created (`illm-k8s-lab-kv`) via GitLab CI + Terraform
+- [x] ESO Service Principal created with credentials stored in Key Vault
+
+**Decision needed:** How to get secrets into Kubernetes?
+- **Option A:** External Secrets Operator (ESO) → Azure Key Vault directly
+- **Option B:** Vault with its own Agent Injector (already have Vault component)
+- **Option C:** Hybrid approach
 
 **Tasks:**
+- [ ] **DECISION:** Choose secrets sync approach (ESO vs Vault vs hybrid)
 - [ ] Store bootstrap credentials in cloud secret managers:
-  - [ ] Azure Key Vault: Create vault, store SP credentials (ARM_CLIENT_ID, etc.)
+  - [x] Azure Key Vault: Create vault, store SP credentials (via Terraform)
   - [ ] AWS Secrets Manager: Store IAM credentials (AWS_ACCESS_KEY_ID, etc.)
-- [ ] Deploy External Secrets Operator via ArgoCD
-- [ ] Create ClusterSecretStore for Azure Key Vault
+- [ ] Deploy chosen secrets operator via ArgoCD
+- [ ] Create ClusterSecretStore/Vault config for Azure Key Vault
 - [ ] Create ClusterSecretStore for AWS Secrets Manager
-- [ ] Create ExternalSecrets for Crossplane provider credentials
+- [ ] Create ExternalSecrets/Vault policies for Crossplane provider credentials
 - [ ] Verify secrets sync to `crossplane-system` namespace
 - [ ] Document bootstrap credential flow
 
@@ -2371,7 +2381,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 - [x] Create `docs/adrs/` directory
 - [ ] Write ADR template (based on Michael Nygard format)
 - [ ] Consolidate and polish ADRs from experiments:
-  - [x] ADR-001: Spacelift for IaC orchestration
+  - [x] ADR-001: GitLab CI for IaC orchestration
   - [ ] ADR-002: Secrets management approach (ESO + Vault)
   - [ ] ADR-003: CI/CD platform selection
   - [ ] ADR-004: Supply chain security strategy
@@ -2475,7 +2485,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 | Phase | Focus | Experiments | Key Skills |
 |-------|-------|-------------|------------|
-| 1 | Platform Bootstrap & GitOps | 5 | GitOps, Talos Linux/N100, Spacelift, Crossplane, FinOps |
+| 1 | Platform Bootstrap & GitOps | 5 | GitOps, Talos Linux/N100, GitLab CI, Crossplane, FinOps |
 | 2 | CI/CD & Supply Chain Security | 4 | Image building, scanning, signing, SBOM, registries |
 | 3 | Security Foundations | 8 | ESO, Vault, cert-manager, policies, identity, multi-tenancy |
 | 4 | Observability | 6 | Prometheus, SLOs, MinIO, Loki, OpenTelemetry, Thanos |
@@ -2500,6 +2510,6 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 - All experiments follow `experiments/_template/` structure
 - **Environment progression**: Kind (dev) → Talos on N100 (home lab) → AKS/EKS (cloud)
-- Talos for home lab (immutable OS), Spacelift+Terraform for cloud, Crossplane for K8s-native
+- Talos for home lab (immutable OS), GitLab CI+Terraform for cloud, Crossplane for K8s-native
 - Ansible for initial Talos provisioning, not ongoing management
 - Each experiment should have a portfolio-ready README

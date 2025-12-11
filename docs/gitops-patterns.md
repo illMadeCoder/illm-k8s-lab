@@ -8,12 +8,12 @@ The project uses a layered GitOps approach:
 
 | Layer | Tool | Responsibility |
 |-------|------|----------------|
-| Cloud Infrastructure | Spacelift + Terraform | VNets, subnets, AKS/EKS clusters, IAM |
+| Cloud Infrastructure | GitLab CI + Terraform | VNets, subnets, AKS/EKS clusters, IAM |
 | Kubernetes Platform | ArgoCD | Core platform components, observability, infrastructure |
 | Applications | ArgoCD | Experiment workloads, demo apps |
 | Workflows | Argo Workflows | Experiment orchestration, load testing |
 
-ArgoCD serves as the GitOps engine for all Kubernetes resources, while Spacelift manages cloud infrastructure provisioning (see [ADR-001](adrs/ADR-001-spacelift-for-iac-orchestration.md)).
+ArgoCD serves as the GitOps engine for all Kubernetes resources, while GitLab CI manages cloud infrastructure provisioning via Terraform (see [ADR-001](adrs/ADR-001-gitlab-ci-for-iac.md)).
 
 ---
 
@@ -502,6 +502,6 @@ Each component follows this pattern:
 
 ## Related Documentation
 
-- [ADR-001: Spacelift for IaC Orchestration](adrs/ADR-001-spacelift-for-iac-orchestration.md)
+- [ADR-001: GitLab CI for IaC Orchestration](adrs/ADR-001-gitlab-ci-for-iac.md)
 - [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
 - [ArgoCD Application Specification](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/)

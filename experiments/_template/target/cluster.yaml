@@ -1,5 +1,5 @@
 # Cluster configuration
-# Spacelift reads this to provision the cluster
+# GitLab CI + Terraform reads this to provision the cluster
 
 size: medium          # small, medium, large
 provider: azure       # azure, aws

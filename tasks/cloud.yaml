@@ -4,7 +4,7 @@ silent: true
 
 # Cloud experiments use the LOCAL orchestrator to manage CLOUD clusters
 # - Orchestrator: local kind cluster (task local:init)
-# - Experiment clusters: AKS/EKS provisioned by Spacelift
+# - Experiment clusters: AKS/EKS provisioned by GitLab CI + Terraform
 
 vars:
   ORCHESTRATOR_CLUSTER: orchestrator
@@ -42,12 +42,12 @@ tasks:
           fi
         done
 
-        # Step 2: Trigger Spacelift to provision clusters
+        # Step 2: Trigger GitLab CI to provision clusters
         echo ""
-        echo "=== Step 2/6: Provisioning cloud clusters via Spacelift ==="
-        echo "TODO: Implement Spacelift integration"
+        echo "=== Step 2/6: Provisioning cloud clusters via GitLab CI ==="
+        echo "TODO: Implement GitLab CI integration"
         echo "  - Read cluster.yaml for each cluster"
-        echo "  - Trigger Spacelift stack for each"
+        echo "  - Trigger GitLab CI pipeline for each"
         echo "  - Wait for clusters to be ready"
         echo "  - Retrieve kubeconfigs"
         exit 1
@@ -70,7 +70,7 @@ tasks:
         # Step 6: Cleanup - destroy cloud clusters
         echo ""
         echo "=== Step 6/6: Destroying cloud clusters ==="
-        echo "TODO: Trigger Spacelift destroy"
+        echo "TODO: Trigger GitLab CI destroy pipeline"
 
   deploy:
     desc: "Deploy experiment to cloud (without running): task cloud:deploy -- <experiment-path>"
@@ -86,9 +86,9 @@ tasks:
 
         echo "Deploying cloud experiment: $EXP_NAME"
         echo ""
-        echo "TODO: Implement Spacelift provisioning"
+        echo "TODO: Implement GitLab CI provisioning"
         echo "  1. Parse cluster.yaml files"
-        echo "  2. Trigger Spacelift stacks"
+        echo "  2. Trigger GitLab CI pipelines"
         echo "  3. Wait for clusters"
         echo "  4. Register with ArgoCD"
         echo "  5. Deploy apps"
@@ -107,6 +107,6 @@ tasks:
 
         echo "Destroying cloud experiment: $EXP_NAME"
         echo ""
-        echo "TODO: Implement Spacelift destroy"
-        echo "  1. Trigger Spacelift destroy for each cluster"
+        echo "TODO: Implement GitLab CI destroy"
+        echo "  1. Trigger GitLab CI destroy pipeline for each cluster"
         echo "  2. Remove from ArgoCD"

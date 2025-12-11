@@ -128,10 +128,10 @@ module "eks" {
     }
   }
 
-  # Allow access from Spacelift runners
+  # Allow access from GitLab CI runners
   cluster_security_group_additional_rules = {
-    ingress_spacelift = {
-      description = "Allow access from Spacelift runners"
+    ingress_gitlab_ci = {
+      description = "Allow access from GitLab CI runners"
       protocol    = "tcp"
       from_port   = 443
       to_port     = 443

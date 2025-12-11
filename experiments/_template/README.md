@@ -37,4 +37,4 @@ mkdir -p my-experiment/newcluster/{argocd,crossplane}
 echo "size: small" > my-experiment/newcluster/cluster.yaml
 ```
 
-Spacelift will discover and provision it automatically.
+GitLab CI will discover and provision it via Terraform.

@@ -1,11 +1,11 @@
 # Multi-Cloud Demo Experiment
 
-This experiment demonstrates the multi-cloud deployment capabilities of the illm-k8s-lab platform using Spacelift + Crossplane.
+This experiment demonstrates the multi-cloud deployment capabilities of the illm-k8s-lab platform using GitLab CI + Terraform + Crossplane.
 
 ## Overview
 
 The multi-cloud demo deploys:
-- **Infrastructure**: AKS (Azure) or EKS (AWS) cluster via Spacelift
+- **Infrastructure**: AKS (Azure) or EKS (AWS) cluster via GitLab CI + Terraform
 - **Application**: Demo web app via ArgoCD
 - **Cloud Resources**: Database, cache, storage, and queue via Crossplane
 
@@ -45,17 +45,17 @@ multi-cloud-demo/
 
 ## Deployment
 
-### Via Spacelift (Recommended)
+### Via GitLab CI (Recommended)
 
 ```bash
 # Deploy to Azure
-task exp:deploy:spacelift NAME=multi-cloud-demo CLOUD=azure
+task exp:deploy NAME=multi-cloud-demo CLOUD=azure
 
 # Deploy to AWS
-task exp:deploy:spacelift NAME=multi-cloud-demo CLOUD=aws
+task exp:deploy NAME=multi-cloud-demo CLOUD=aws
 
 # Deploy to both (parallel)
-task exp:deploy:spacelift NAME=multi-cloud-demo CLOUD=both
+task exp:deploy NAME=multi-cloud-demo CLOUD=both
 ```
 
 ### Via Terraform (Manual)
@@ -92,8 +92,8 @@ demo        demo-cache   redis    small   demo-cache.redis.cache...   6380   azu
 ## Cleanup
 
 ```bash
-# Via Spacelift
-task exp:destroy:spacelift NAME=multi-cloud-demo CLOUD=azure
+# Via GitLab CI
+task exp:destroy NAME=multi-cloud-demo CLOUD=azure
 
 # Via Terraform
 cd experiments/multi-cloud-demo/terraform/azure
