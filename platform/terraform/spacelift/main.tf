@@ -17,10 +17,11 @@ terraform {
 # Contexts (shared variables/secrets across stacks)
 # -----------------------------------------------------------------------------
 
-# Azure context created manually during bootstrap (contains ARM_* secrets)
-# We reference it here rather than creating it
-data "spacelift_context" "azure" {
-  context_id = "azure-credentials"
+# Azure context - created by Terraform, secrets added manually in UI after
+resource "spacelift_context" "azure" {
+  name        = "azure-credentials"
+  description = "Azure credentials for Terraform (ARM_CLIENT_ID, ARM_CLIENT_SECRET, ARM_SUBSCRIPTION_ID, ARM_TENANT_ID)"
+  labels      = ["azure"]
 }
 
 # AWS context - will add credentials when we set up AWS
@@ -49,7 +50,7 @@ resource "spacelift_stack" "azure_foundation" {
 }
 
 resource "spacelift_context_attachment" "azure_foundation" {
-  context_id = data.spacelift_context.azure.id
+  context_id = spacelift_context.azure.id
   stack_id   = spacelift_stack.azure_foundation.id
 }
 
@@ -68,7 +69,7 @@ resource "spacelift_stack" "azure_aks" {
 }
 
 resource "spacelift_context_attachment" "azure_aks" {
-  context_id = data.spacelift_context.azure.id
+  context_id = spacelift_context.azure.id
   stack_id   = spacelift_stack.azure_aks.id
 }
 
