@@ -96,9 +96,3 @@ task exp:undeploy:{name} # Cleanup experiment
 git push                 # Triggers Spacelift runs (autodeploy stacks)
 ```
 
-## Azure
-
-- Account: `illmadecoder@gmail.com`
-- Subscription: `ea1c09cc-6150-4e0d-a054-9ea78916533b`
-- Tenant: `56576b18-e6e5-4cc9-8a18-245e42cf1c6a`
-- Spacelift SP: `spacelift-admin` (Client ID: `b345f2fd-e18a-47f3-9936-5e86c59b5522`)
