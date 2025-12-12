@@ -1,59 +1,112 @@
-# ADR-002: Secrets Management with ESO + Vault
+# ADR-002: Progressive Secrets Management Learning
 
 ## Status
 
-Accepted
+Accepted (supersedes previous ESO-first approach)
 
 ## Context
 
-Need GitOps-friendly secrets management that solves the bootstrap problem: cloud credentials are needed to deploy Vault, but Vault is where we'd store credentials.
+Need to learn GitOps-friendly secrets management for a Kubernetes learning lab. Key requirements:
+- Understand trade-offs between different approaches
+- No cloud dependencies for core infrastructure (CapEx home lab over OpEx cloud)
+- OpenBao on hub cluster as the production target
+- Progressive learning from simple to complex
 
 ## Decision
 
-**Use External Secrets Operator (ESO)** with a two-phase approach:
+**Learn secrets management progressively:** Sealed Secrets → SOPS+age → ESO+OpenBao
 
-1. **Bootstrap**: Cloud secret managers (Azure KV, AWS SM) → ESO → K8s Secrets
-2. **Production**: Vault → ESO → K8s Secrets (cloud managers retained for ESO auth)
+Each approach teaches different concepts:
+
+| Approach | What You Learn |
+|----------|----------------|
+| **Sealed Secrets** | Asymmetric encryption, cluster-bound keys, GitOps basics |
+| **SOPS + age** | Key management, cluster-independent encryption, ArgoCD plugins |
+| **ESO + OpenBao** | Central secrets store, dynamic secrets, production patterns |
 
 ## Comparison
 
-| Factor | ESO | Vault Agent | Vault CSI | Sealed Secrets | SOPS |
-|--------|-----|-------------|-----------|----------------|------|
-| **GitOps-friendly** | Yes (CRs) | No (annotations) | Partial | Yes | Yes |
-| **Central management** | Yes | Yes | Yes | No | No |
-| **Multiple backends** | Vault, Azure, AWS, GCP | Vault only | Vault only | N/A | KMS only |
-| **Rotation** | Yes (refreshInterval) | Yes | Limited | No | No |
-| **Per-pod config needed** | No | Yes (sidecar) | Yes (CSI volume) | No | No |
-| **Dynamic credentials** | Via Vault backend | Yes | Yes | No | No |
+| Factor | Sealed Secrets | SOPS + age | ESO + OpenBao |
+|--------|----------------|------------|---------------|
+| **GitOps-friendly** | Yes | Yes | Yes |
+| **Cluster-independent** | No | Yes | Yes |
+| **Central management** | No | No | Yes |
+| **Rotation** | Manual re-seal | Manual re-encrypt | Automatic |
+| **Dynamic secrets** | No | No | Yes |
+| **Complexity** | Low | Medium | Higher |
+| **External dependencies** | None | age key | OpenBao service |
 
-## Why ESO + Two-Phase
+## Architecture
 
-- **Solves bootstrap**: Cloud secret managers don't need K8s to exist; ESO uses Workload Identity/IRSA
-- **GitOps-native**: ExternalSecret CRs in Git, actual secrets never stored
-- **Backend flexibility**: Switch from cloud → Vault without app changes
-- **No sidecars**: Works with any workload, no per-pod configuration
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Hub Cluster (N100 / Kind / K3s)                           │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  OpenBao                                             │   │
+│  │  - KV secrets engine (static secrets)               │   │
+│  │  - Database engine (dynamic creds)                  │   │
+│  │  - PKI engine (certificates)                        │   │
+│  │  - Kubernetes auth per experiment                   │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                         │
+     ┌───────────────────┼───────────────────┐
+     │                   │                   │
+     ▼                   ▼                   ▼
+┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+│ Experiment  │   │ Experiment  │   │ Experiment  │
+│ Cluster A   │   │ Cluster B   │   │ Cluster C   │
+│ (ESO)       │   │ (SOPS)      │   │ (Sealed)    │
+└─────────────┘   └─────────────┘   └─────────────┘
+```
 
-## Why Not Others
+## When to Use Each
 
-**Sealed Secrets**: No central management, no rotation, secrets still version-controlled in Git
+**Sealed Secrets:**
+- Quick experiments that don't need secret portability
+- Learning GitOps basics
+- Single-cluster, short-lived deployments
 
-**SOPS + Age/KMS**: Complex key management, no dynamic credentials, requires CI/CD tooling
+**SOPS + age:**
+- Multi-cluster deployments with same secrets
+- CI/CD pipelines that need to decrypt locally
+- When you control the encryption keys
 
-**Vault Agent Only**: Per-pod annotations required, not GitOps-friendly, sidecar complexity
+**ESO + OpenBao:**
+- Production workloads
+- Dynamic database credentials
+- Secret rotation requirements
+- Audit logging needs
+- Central secrets governance
 
-**Vault CSI Only**: Requires CSI driver, volume management per pod, limited rotation
+## Why Not Cloud Secret Managers?
+
+Previous approach used Azure Key Vault + ESO. Rejected because:
+- Creates cloud OpEx dependency for infrastructure
+- Home lab should be self-contained (CapEx model)
+- Cloud secret managers make sense for *experiments* that need cloud resources, not for core infrastructure
+
+Cloud secret managers (Azure Key Vault, AWS Secrets Manager) remain options for experiments via Crossplane, but the hub cluster uses OpenBao.
 
 ## Consequences
 
-**Positive**: GitOps-compatible, automatic rotation, centralized audit (Vault), no static credentials
+**Positive:**
+- Learn trade-offs through hands-on experience
+- No cloud lock-in for core infrastructure
+- Self-contained home lab
 
-**Negative**: ESO adds operational overhead, two systems during transition
+**Negative:**
+- Must operate OpenBao (backup, HA, upgrades)
+- More complex than managed cloud service
 
 ## References
 
+- [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets)
+- [SOPS](https://github.com/getsops/sops)
+- [age encryption](https://github.com/FiloSottile/age)
 - [External Secrets Operator](https://external-secrets.io/)
-- [ESO Vault Provider](https://external-secrets.io/latest/provider/hashicorp-vault/)
+- [OpenBao](https://openbao.org/) (Vault fork)
 
 ## Decision Date
 
-2025-12-10
+2025-12-12

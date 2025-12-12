@@ -22,7 +22,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ## Phase 1: Platform Bootstrap & GitOps Foundation
 
-*Get the multi-cloud GitOps foundation running. Document existing patterns first, then build on them.*
+*Establish the hub cluster and GitOps foundation. The hub provides persistent services (secrets, registry, GitOps) that experiments consume.*
 
 ### 1.1 Document Current GitOps Patterns
 
@@ -56,11 +56,76 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 1.2 Home Lab Cluster with Talos Linux
+### 1.2 Hub Cluster
 
-**Goal:** Build a home lab Kubernetes cluster on bare metal using Talos Linux
+**Goal:** Establish a persistent hub cluster that provides foundational services for all experiments
 
-*Bridge between Kind (dev) and cloud (production). Immutable OS, declarative config, production patterns.*
+*The hub hosts services that experiments depend on but shouldn't duplicate. It can run on Kind (laptop), K3s/Talos (N100 home lab), or even cloud - the bootstrap is idempotent.*
+
+**Learning objectives:**
+- Understand the hub-spoke cluster pattern
+- Design environment-agnostic cluster bootstrap
+- Establish service boundaries between hub and experiment clusters
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Hub Cluster                                                │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
+│  │  OpenBao    │ │  Registry   │ │   ArgoCD    │           │
+│  │  (secrets)  │ │  (Harbor)   │ │  (GitOps)   │           │
+│  └─────────────┘ └─────────────┘ └─────────────┘           │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
+│  │ Private CA  │ │  Identity   │ │  Artifact   │           │
+│  │ (step-ca)   │ │  (Keycloak) │ │  Storage    │           │
+│  └─────────────┘ └─────────────┘ └─────────────┘           │
+└─────────────────────────────────────────────────────────────┘
+          │ provides secrets, images, certs, identity
+          ▼
+┌─────────────────────┐  ┌─────────────────────┐
+│ Experiment A        │  │ Experiment B        │
+│ (own orchestration) │  │ (own orchestration) │
+└─────────────────────┘  └─────────────────────┘
+```
+
+**Core Services (MVP):**
+- [ ] **OpenBao** - Secrets management (Vault fork, open source)
+- [ ] **Container Registry** - Harbor or distribution/registry
+- [ ] **ArgoCD** - GitOps deployments to experiment clusters
+
+**Extended Services (Later):**
+- [ ] **Private CA** - step-ca for internal certificates
+- [ ] **Identity Provider** - Keycloak or Dex for SSO
+- [ ] **Artifact Storage** - MinIO for Helm charts, backups, logs
+- [ ] **DNS** - CoreDNS or external-dns for service discovery
+
+**Bootstrap Requirements:**
+- [ ] Single command bootstrap (Makefile or Taskfile)
+- [ ] Works on Kind (laptop dev)
+- [ ] Works on K3s (lightweight production)
+- [ ] Works on Talos (immutable production)
+- [ ] Idempotent - can re-run safely
+- [ ] Configuration in Git (GitOps from day one)
+
+**Tasks:**
+- [ ] Create `platform/hub/` directory structure
+- [ ] Design bootstrap script/Taskfile
+- [ ] Create Helm values / Kustomize overlays per environment:
+  - [ ] `overlays/kind/` - laptop development
+  - [ ] `overlays/k3s/` - lightweight home lab
+  - [ ] `overlays/talos/` - production home lab
+- [ ] Bootstrap ArgoCD (chicken-egg: manual first, then self-managed)
+- [ ] Create app-of-apps for hub services
+- [ ] Document hub cluster architecture
+- [ ] **ADR:** Document hub cluster pattern and service selection
+
+---
+
+### 1.3 Home Lab Cluster with Talos Linux
+
+**Goal:** Deploy the hub cluster on bare metal using Talos Linux
+
+*The N100 becomes your production hub cluster. Immutable OS, declarative config, production patterns.*
 
 **Learning objectives:**
 - Understand Talos Linux as an immutable, secure Kubernetes OS
@@ -116,9 +181,11 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 1.3 GitLab CI Setup (Cloud IaC)
+### 1.4 GitLab CI Setup (Cloud IaC)
 
 **Goal:** Establish GitLab CI for Terraform state management and IaC orchestration
+
+*Used when experiments need cloud resources (AKS, EKS, cloud databases, etc.). Dormant until needed.*
 
 **Learning objectives:**
 - Understand GitLab CI pipelines for Terraform
@@ -129,16 +196,16 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 - [x] Create GitLab account and connect GitHub repo (mirror)
 - [x] Create `.gitlab-ci.yml` for Terraform pipelines
 - [x] Configure GitLab CI variables for cloud credentials (Azure, AWS)
-- [x] Deploy azure-foundation via GitLab CI (Resource Group, Key Vault, ESO SP)
-- [ ] Set up Kind cluster with sufficient resources
 - [ ] Document GitLab CI workflow patterns
 - [x] **ADR:** Document why GitLab CI over Spacelift/Terraform Cloud (see `docs/adrs/ADR-001-gitlab-ci-for-iac.md`)
 
 ---
 
-### 1.4 Crossplane Fundamentals
+### 1.5 Crossplane Fundamentals
 
 **Goal:** Master Crossplane for cloud resource provisioning
+
+*Crossplane runs on the hub cluster and provisions cloud resources for experiments.*
 
 **Learning objectives:**
 - Understand Crossplane architecture (providers, XRDs, compositions)
@@ -146,8 +213,8 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 - Build reusable compositions for common patterns
 
 **Tasks:**
-- [ ] Deploy Crossplane to Kind cluster
-- [ ] Install AWS and Azure providers (credentials via ESO from Phase 3)
+- [ ] Deploy Crossplane to hub cluster
+- [ ] Install AWS and Azure providers (credentials from OpenBao via Phase 3)
 - [ ] Verify existing XRDs: Database, ObjectStorage, Queue, Cache
 - [ ] Test claims provision real cloud resources
 - [ ] Document XRD authoring patterns
@@ -155,7 +222,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 1.5 FinOps Foundation & Cost Tagging
+### 1.6 FinOps Foundation & Cost Tagging
 
 **Goal:** Establish cost visibility foundation and tagging strategy
 
@@ -315,64 +382,172 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 *Security first - TLS, certificates, identity, secrets, and policies are prerequisites for everything else.*
 
-### 3.1 Bootstrap Credentials & External Secrets
+*Secrets management is learned progressively: Sealed Secrets (simplest) → SOPS+age (cluster-independent) → ESO+OpenBao (full platform). This builds understanding of trade-offs before committing to a production pattern.*
 
-**Goal:** Establish credential management foundation for cloud deployments
+### 3.1 Sealed Secrets
 
-*This phase unblocks all cloud-dependent work by setting up secrets sync from cloud secret managers into Kubernetes.*
+**Goal:** Learn the simplest GitOps-friendly secrets approach
+
+*Sealed Secrets encrypts secrets so they can be stored in Git. The controller decrypts them in-cluster. Simple but cluster-bound.*
 
 **Learning objectives:**
-- Understand External Secrets Operator vs Vault Agent Injector trade-offs
-- Configure cloud secret store providers (Azure Key Vault, AWS Secrets Manager)
-- Bootstrap credential flow for Crossplane and other platform components
+- Understand asymmetric encryption for secrets
+- Learn the trade-offs of cluster-bound encryption
+- Practice GitOps workflow with encrypted secrets
 
-**Current state:**
-- [x] Azure Key Vault created (`illm-k8s-lab-kv`) via GitLab CI + Terraform
-- [x] ESO Service Principal created with credentials stored in Key Vault
-
-**Decision needed:** How to get secrets into Kubernetes?
-- **Option A:** External Secrets Operator (ESO) → Azure Key Vault directly
-- **Option B:** Vault with its own Agent Injector (already have Vault component)
-- **Option C:** Hybrid approach
+**Characteristics:**
+| Aspect | Sealed Secrets |
+|--------|----------------|
+| **GitOps-friendly** | Yes - encrypted secrets in Git |
+| **Cluster-independent** | No - keys tied to controller |
+| **Central management** | No - each cluster has own keys |
+| **Rotation** | Manual re-seal required |
+| **Complexity** | Low |
 
 **Tasks:**
-- [ ] **DECISION:** Choose secrets sync approach (ESO vs Vault vs hybrid)
-- [ ] Store bootstrap credentials in cloud secret managers:
-  - [x] Azure Key Vault: Create vault, store SP credentials (via Terraform)
-  - [ ] AWS Secrets Manager: Store IAM credentials (AWS_ACCESS_KEY_ID, etc.)
-- [ ] Deploy chosen secrets operator via ArgoCD
-- [ ] Create ClusterSecretStore/Vault config for Azure Key Vault
-- [ ] Create ClusterSecretStore for AWS Secrets Manager
-- [ ] Create ExternalSecrets/Vault policies for Crossplane provider credentials
-- [ ] Verify secrets sync to `crossplane-system` namespace
-- [ ] Document bootstrap credential flow
+- [ ] Create `experiments/sealed-secrets/`
+- [ ] Deploy Sealed Secrets controller to hub cluster
+- [ ] Install `kubeseal` CLI
+- [ ] Create and seal a secret:
+  - [ ] Create plain Kubernetes Secret
+  - [ ] Seal with `kubeseal`
+  - [ ] Commit SealedSecret to Git
+  - [ ] Verify unsealing in cluster
+- [ ] Backup and restore:
+  - [ ] Backup controller private key
+  - [ ] Test restore to new cluster
+  - [ ] Understand disaster recovery implications
+- [ ] Limitations exercise:
+  - [ ] Try to unseal on different cluster (should fail)
+  - [ ] Document when this is a problem
+- [ ] Document Sealed Secrets patterns and limitations
 
 ---
 
-### 3.2 Vault & Secrets Management
+### 3.2 SOPS + age Encryption
 
-**Goal:** Centralized secrets management with Vault + External Secrets Operator
+**Goal:** Learn cluster-independent secret encryption
 
-*Vault becomes the central secrets store, with ESO providing GitOps-friendly secret synchronization.*
+*SOPS encrypts files with age keys you control. Secrets can be decrypted anywhere you have the key - not tied to any cluster.*
 
 **Learning objectives:**
-- Understand Vault architecture (secrets engines, auth methods, policies)
-- Integrate Vault with External Secrets Operator
+- Understand SOPS and age encryption
+- Learn key management fundamentals
+- Compare with Sealed Secrets trade-offs
+
+**Characteristics:**
+| Aspect | SOPS + age |
+|--------|------------|
+| **GitOps-friendly** | Yes - encrypted files in Git |
+| **Cluster-independent** | Yes - decrypt anywhere with key |
+| **Central management** | Partial - key distribution needed |
+| **Rotation** | Re-encrypt with new key |
+| **Complexity** | Medium |
+
+**Tasks:**
+- [ ] Create `experiments/sops-age/`
+- [ ] Install SOPS and age CLIs
+- [ ] Generate age keypair:
+  - [ ] Understand public/private key model
+  - [ ] Secure storage of private key
+- [ ] Encrypt secrets with SOPS:
+  - [ ] Create `.sops.yaml` configuration
+  - [ ] Encrypt a secrets file
+  - [ ] Commit encrypted file to Git
+  - [ ] Decrypt locally to verify
+- [ ] Integrate with ArgoCD:
+  - [ ] Deploy KSOPS or SOPS plugin
+  - [ ] Configure ArgoCD to decrypt on apply
+  - [ ] Test GitOps workflow with encrypted secrets
+- [ ] Key management patterns:
+  - [ ] Multiple recipients (team access)
+  - [ ] Key rotation procedure
+- [ ] Compare with Sealed Secrets:
+  - [ ] Portability advantages
+  - [ ] Key management overhead
+- [ ] Document SOPS patterns
+
+---
+
+### 3.3 OpenBao & External Secrets Operator
+
+**Goal:** Implement centralized secrets management with OpenBao on the hub cluster
+
+*OpenBao (Vault fork) on the hub cluster becomes the central secrets store. ESO syncs secrets to experiment clusters. This is the production pattern.*
+
+**Learning objectives:**
+- Understand OpenBao/Vault architecture (secrets engines, auth methods, policies)
+- Configure External Secrets Operator
 - Establish secrets management patterns for experiments
 
+**Characteristics:**
+| Aspect | ESO + OpenBao |
+|--------|---------------|
+| **GitOps-friendly** | Yes - ExternalSecret CRs in Git |
+| **Cluster-independent** | Yes - OpenBao is external |
+| **Central management** | Yes - single source of truth |
+| **Rotation** | Yes - automatic via refreshInterval |
+| **Complexity** | Higher |
+
+**Architecture:**
+```
+┌─────────────────────────────────────┐
+│  Hub Cluster                        │
+│  ┌─────────────────────────────┐   │
+│  │  OpenBao                     │   │
+│  │  - KV secrets engine        │   │
+│  │  - Kubernetes auth          │   │
+│  │  - Per-experiment policies  │   │
+│  └─────────────────────────────┘   │
+└─────────────────────────────────────┘
+          │ secrets API
+          ▼
+┌─────────────────────────────────────┐
+│  Experiment Cluster                 │
+│  ┌─────────────────────────────┐   │
+│  │  External Secrets Operator   │   │
+│  │  - ClusterSecretStore → Bao │   │
+│  │  - ExternalSecret CRs       │   │
+│  └─────────────────────────────┘   │
+│             │                       │
+│             ▼                       │
+│  ┌─────────────────────────────┐   │
+│  │  Kubernetes Secrets          │   │
+│  │  (synced from OpenBao)      │   │
+│  └─────────────────────────────┘   │
+└─────────────────────────────────────┘
+```
+
 **Tasks:**
-- [ ] Deploy Vault via ArgoCD (already in workload-catalog)
-- [ ] Configure Kubernetes auth method
-- [ ] Create policies for experiments (per-namespace isolation)
-- [ ] Create ClusterSecretStore pointing to Vault
-- [ ] Migrate bootstrap secrets to Vault (optional, for consolidation)
-- [ ] Create example ExternalSecret using Vault backend
-- [ ] Document Vault + ESO patterns
-- [ ] **ADR:** Document secrets management architecture (see `docs/adrs/ADR-002-secrets-management.md`)
+- [ ] Create `experiments/eso-openbao/`
+- [ ] Deploy OpenBao to hub cluster:
+  - [ ] Helm chart deployment
+  - [ ] Initialize and unseal
+  - [ ] Enable KV secrets engine
+- [ ] Configure authentication:
+  - [ ] Kubernetes auth method
+  - [ ] Per-namespace policies
+  - [ ] Service account bindings
+- [ ] Deploy ESO to experiment cluster:
+  - [ ] Install ESO operator
+  - [ ] Create ClusterSecretStore pointing to OpenBao
+- [ ] Create ExternalSecret resources:
+  - [ ] Sync a secret from OpenBao
+  - [ ] Test refresh interval
+  - [ ] Verify secret updates propagate
+- [ ] Production patterns:
+  - [ ] Secret rotation workflow
+  - [ ] Audit logging
+  - [ ] Backup and recovery
+- [ ] Compare all three approaches:
+  - [ ] When to use each
+  - [ ] Migration paths
+- [ ] Document ESO + OpenBao patterns
+- [ ] **ADR:** Document secrets management progression (see `docs/adrs/ADR-002-secrets-management.md`)
 
 ---
 
-### 3.3 cert-manager & TLS Automation
+### 3.4 cert-manager & TLS Automation
 
 **Goal:** Automate TLS certificate lifecycle in Kubernetes
 
@@ -400,11 +575,11 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 3.4 Advanced Vault Patterns
+### 3.5 Advanced OpenBao Patterns
 
 **Goal:** Dynamic credentials, PKI, and advanced secret injection patterns
 
-*Builds on Phase 3.2 (Vault + ESO basics) with production-grade patterns.*
+*Builds on Phase 3.3 (OpenBao + ESO basics) with production-grade patterns.*
 
 **Learning objectives:**
 - Implement dynamic database credentials
@@ -412,7 +587,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 - Compare secret injection methods (Agent vs CSI vs ESO)
 
 **Tasks:**
-- [ ] Create `experiments/vault-advanced/`
+- [ ] Create `experiments/openbao-advanced/`
 - [ ] Configure advanced auth methods:
   - [ ] AppRole (for CI/CD pipelines)
   - [ ] JWT/OIDC (for external identity providers)
@@ -420,20 +595,20 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
   - [ ] Database engine (dynamic PostgreSQL creds with TTL)
   - [ ] PKI engine (dynamic certificates for mTLS)
 - [ ] Implement secret injection comparison:
-  - [ ] Vault Agent Sidecar (file-based injection)
-  - [ ] Vault CSI Provider (volume-based injection)
+  - [ ] OpenBao Agent Sidecar (file-based injection)
+  - [ ] OpenBao CSI Provider (volume-based injection)
   - [ ] External Secrets Operator (Kubernetes Secret sync)
 - [ ] Test secret rotation workflows:
   - [ ] Automatic credential rotation
   - [ ] Application restart-free rotation
 - [ ] Implement audit logging and monitoring
-- [ ] Configure Vault HA (Raft storage) for production
+- [ ] Configure OpenBao HA (Raft storage) for production
 - [ ] Document injection method trade-offs
-- [ ] **ADR:** Compare Vault injection methods (Agent vs CSI vs ESO)
+- [ ] **ADR:** Compare OpenBao injection methods (Agent vs CSI vs ESO)
 
 ---
 
-### 3.5 Policy & Governance
+### 3.6 Policy & Governance
 
 **Goal:** Implement policy-as-code for compliance and operational guardrails
 
@@ -483,7 +658,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 3.6 Network Policies & Pod Security
+### 3.7 Network Policies & Pod Security
 
 **Goal:** Implement defense-in-depth with network segmentation and pod security
 
@@ -510,7 +685,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 3.7 Identity & Access Management
+### 3.8 Identity & Access Management
 
 **Goal:** Integrate external identity providers with Kubernetes RBAC
 
@@ -546,7 +721,7 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 ---
 
-### 3.8 Multi-Tenancy Security Foundations
+### 3.9 Multi-Tenancy Security Foundations
 
 **Goal:** Establish tenant isolation patterns using security primitives
 
@@ -2485,9 +2660,9 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 
 | Phase | Focus | Experiments | Key Skills |
 |-------|-------|-------------|------------|
-| 1 | Platform Bootstrap & GitOps | 5 | GitOps, Talos Linux/N100, GitLab CI, Crossplane, FinOps |
+| 1 | Platform Bootstrap & GitOps | 6 | GitOps, Hub Cluster, Talos/N100, GitLab CI, Crossplane, FinOps |
 | 2 | CI/CD & Supply Chain Security | 4 | Image building, scanning, signing, SBOM, registries |
-| 3 | Security Foundations | 8 | ESO, Vault, cert-manager, policies, identity, multi-tenancy |
+| 3 | Security Foundations | 9 | Sealed Secrets, SOPS+age, OpenBao+ESO, cert-manager, policies, identity, multi-tenancy |
 | 4 | Observability | 6 | Prometheus, SLOs, MinIO, Loki, OpenTelemetry, Thanos |
 | 5 | Traffic Management | 3 | Gateway API, Ingress, API Gateway |
 | 6 | Service Mesh | 5 | Decision framework, Istio, Linkerd, Cilium, Cross-cluster |
@@ -2509,7 +2684,10 @@ A learning-focused Kubernetes experiment roadmap for **Cloud Architect**, **Plat
 ## Notes
 
 - All experiments follow `experiments/_template/` structure
-- **Environment progression**: Kind (dev) → Talos on N100 (home lab) → AKS/EKS (cloud)
-- Talos for home lab (immutable OS), GitLab CI+Terraform for cloud, Crossplane for K8s-native
+- **Hub Cluster**: Persistent cluster hosting OpenBao, Registry, ArgoCD - runs on Kind (laptop), K3s, or Talos (N100)
+- **Environment progression**: Kind (dev) → Talos on N100 (home lab) → AKS/EKS (cloud experiments only)
+- **CapEx over OpEx**: Home lab infrastructure is self-hosted; cloud resources only for experiments that require them
+- GitLab CI + Terraform for cloud IaC when experiments need cloud resources
+- Crossplane for K8s-native cloud resource provisioning
 - Ansible for initial Talos provisioning, not ongoing management
 - Each experiment should have a portfolio-ready README
